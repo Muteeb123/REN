@@ -1,0 +1,229 @@
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  Image,
+  Platform,
+  StatusBar,
+} from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { Ionicons } from "@expo/vector-icons";
+
+import AppLoading from "expo-app-loading";
+
+const { width, height } = Dimensions.get("window");
+
+// Responsive sizing function
+const responsiveSize = (size) => {
+  const scale = Math.min(width / 375, 1.2); // 375 is standard iPhone width, max scale 1.2
+  return Math.round(size * scale);
+};
+
+const responsiveHeight = (size) => {
+  const scale = Math.min(height / 812, 1.2); // 812 is standard iPhone height
+  return Math.round(size * scale);
+};
+
+const colors = {
+  primary: "#FF3366",
+  back: "#585858",
+  secondary: "#FF5700",
+  textDark: "#FFFFFF",
+  textLight: "#E5E5E5",
+  background: "#121212",
+  surface: "rgba(255, 87, 0, 0.1)",
+  accentLight: "rgba(255, 87, 0, 0.15)",
+  white: "#FFFFFF",
+  indigo: "#29184F",
+  card: "#1e1e1e",
+};
+
+export default function LoginPage() {
+
+
+
+  // Calculate responsive curve height
+  const curveHeight = responsiveHeight(160);
+
+  return (
+    <View style={styles.container}>
+      <StatusBar backgroundColor={colors.background} barStyle="light-content" />
+      
+      {/* Top Dark Section */}
+      <View style={styles.topSection}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={{ uri: 'https://img.icons8.com/fluency/144/reddit.png' }}
+            style={styles.logo}
+          />
+          <Text style={styles.title}>REN</Text>
+          <Text style={styles.subtitle}>Reddit Emotion Navigator</Text>
+        </View>
+
+        {/* Wavy Curve Divider */}
+        <Svg
+          height={curveHeight}
+          width={width}
+          viewBox={`0 0 ${width} ${curveHeight}`}
+          style={styles.curve}
+          preserveAspectRatio="none"
+        >
+          <Path
+            d={`
+              M0,${curveHeight}
+              C ${width * 0.15},0 ${width * 0.2},${curveHeight + 10} ${width * 0.5},${curveHeight * 0.625}
+              C ${width * 0.75},${curveHeight * 0.375} ${width * 0.8},${curveHeight * 1.4375} ${width},${curveHeight * 0.75}
+              L ${width},0
+              L 0,0
+              Z
+            `}
+            fill={colors.background}
+          />
+        </Svg>
+      </View>
+
+      {/* Bottom Dark Section */}
+      <View style={styles.bottomSection}>
+        <Text style={styles.welcomeText}>Welcome to REN</Text>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => console.log("Login with Reddit pressed")}
+        >
+          <Ionicons name="logo-reddit" size={responsiveSize(20)} color={colors.white} />
+          <Text style={styles.buttonText}>Login with Reddit</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
+          onPress={() => console.log("Signup with Reddit pressed")}
+        >
+          <Ionicons name="add-circle-outline" size={responsiveSize(20)} color={colors.white} />
+          <Text style={styles.buttonText}>Signup with Reddit</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.footerText}>
+          By continuing, you agree to our Terms and Privacy Policy
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.back,
+  },
+  topSection: {
+    height: height * 0.45,
+    minHeight: responsiveHeight(300),
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 2,
+    paddingTop: Platform.OS === 'ios' ? responsiveHeight(40) : StatusBar.currentHeight,
+    paddingBottom: 0,
+  },
+  curve: {
+    position: "absolute",
+    bottom: -responsiveHeight(80),
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: responsiveHeight(20),
+    paddingHorizontal: responsiveSize(20),
+    zIndex: 3,
+  },
+  logo: {
+    width: responsiveSize(120),
+    height: responsiveSize(120),
+    maxWidth: 150,
+    maxHeight: 150,
+    resizeMode: "contain",
+    marginBottom: responsiveSize(16),
+  },
+  title: {
+    fontSize: responsiveSize(42),
+    fontFamily: "georgia",
+    color: colors.white,
+    zIndex: 3,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: responsiveSize(8),
+  },
+  subtitle: {
+    fontSize: responsiveSize(16),
+    fontFamily: "georgia",
+    color: colors.textLight,
+    marginTop: responsiveSize(6),
+    zIndex: 3,
+    textAlign: "center",
+    lineHeight: responsiveSize(22),
+    paddingHorizontal: responsiveSize(10),
+  },
+  bottomSection: {
+    flex: 1,
+    backgroundColor: colors.back,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingTop: responsiveHeight(80),
+    paddingHorizontal: responsiveSize(30),
+    paddingBottom: responsiveHeight(20),
+    minHeight: height * 0.55,
+  },
+  welcomeText: {
+    fontSize: responsiveSize(26),
+    fontFamily: "georgia",
+    color: colors.white,
+    textAlign: "center",
+    marginBottom: responsiveHeight(30),
+    lineHeight: responsiveSize(34),
+    fontWeight: "bold",
+    paddingHorizontal: responsiveSize(20),
+  },
+  button: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1A1A1A",
+    paddingVertical: responsiveSize(14),
+    paddingHorizontal: responsiveSize(20),
+    borderRadius: responsiveSize(24),
+    width: "85%",
+    maxWidth: 300,
+    marginVertical: responsiveSize(10),
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    minHeight: responsiveSize(50),
+  },
+  secondaryButton: {
+    backgroundColor: "#2F2F2F",
+  },
+  buttonText: {
+    color: colors.white,
+    fontSize: responsiveSize(16),
+    fontWeight: "600",
+    marginLeft: responsiveSize(10),
+    textAlign: "center",
+  },
+  footerText: {
+    fontSize: responsiveSize(12),
+    color: colors.textLight,
+    textAlign: "center",
+    marginTop: responsiveHeight(30),
+    lineHeight: responsiveSize(18),
+    paddingHorizontal: responsiveSize(20),
+    opacity: 0.8,
+  },
+});
