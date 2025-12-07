@@ -11,10 +11,7 @@ class UserMessage(BaseModel):
 @router.post("/generateText")
 async def chat(msg: UserMessage):
     try:
-        response = await generateText(
-            msg.user_id,
-            msg.message
-        )
+        response = await generateText(msg.user_id, msg.message)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
