@@ -5,6 +5,8 @@ client = genai.Client(api_key="AIzaSyCPLmB-ZguiFlZ3IRAew0qCjvTquv584PQ")
 MODEL_NAME = "gemini-2.5-flash"
 
 async def generateResponse(user_id: str, user_message: str):
+
+    print("Generating response for user_id:", user_id)
     # Fetch active conversation from db
     conv = await db.conversations.find_one({
         "user_id": user_id,
@@ -12,6 +14,8 @@ async def generateResponse(user_id: str, user_message: str):
     })
     
     # If no active convo is found, create a new conversation
+
+    print("Current conversation state:", conv)
     if not conv:
         conv = {
             "user_id": user_id,
@@ -26,6 +30,7 @@ async def generateResponse(user_id: str, user_message: str):
     })
     
     # Prepare messages for Gemini in the correct format
+    print("Preparing messages for Gemini API")
     messages_for_gemini = []
     for msg in conv["messages"]:
         messages_for_gemini.append({
@@ -33,12 +38,13 @@ async def generateResponse(user_id: str, user_message: str):
             "parts": [{"text": msg["content"]}]
         })
     
+    print("Messages formatted for Gemini API:", messages_for_gemini)
     # Send all messages in ONE API call
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=messages_for_gemini
     )
-    
+    print("Received response from Gemini API:", response)
     assistant_reply = response.text
     
     # Store assistant's reply in conversation
@@ -53,7 +59,7 @@ async def generateResponse(user_id: str, user_message: str):
         {"$set": conv},
         upsert=True
     )
-    
+    print("Updated conversation in database for user_id:", user_id)
     return {
         "reply": assistant_reply
     }
