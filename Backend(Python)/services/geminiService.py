@@ -1,8 +1,15 @@
 from google import genai
 from config.db import db
+from datetime import datetime
+from dotenv import load_dotenv
+import os
 
-client = genai.Client(api_key="AIzaSyCPLmB-ZguiFlZ3IRAew0qCjvTquv584PQ")
-MODEL_NAME = "gemini-2.5-flash"
+load_dotenv()  # loads .env into environment variables
+
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+client = genai.Client(api_key= API_KEY)
+MODEL_NAME = "gemini-2.5-flash-lite"
 
 async def generateResponse(user_id: str, user_message: str):
     # Fetch active conversation from db
@@ -16,13 +23,17 @@ async def generateResponse(user_id: str, user_message: str):
         conv = {
             "user_id": user_id,
             "active": True,
-            "messages": []
+            "messages": [],
+            "updated_at": datetime.now(),
+            "created_at": datetime.now()
         }
     
     # Add the user's message to conversation
     conv["messages"].append({
         "role": "user",
-        "content": user_message
+        "content": user_message,
+        "created_at": datetime.now(),  # ADD THIS
+        "updated_at": datetime.now()
     })
     
     # Prepare messages for Gemini in the correct format
@@ -33,6 +44,7 @@ async def generateResponse(user_id: str, user_message: str):
             "parts": [{"text": msg["content"]}]
         })
     
+
     # Send all messages in ONE API call
     response = client.models.generate_content(
         model=MODEL_NAME,
@@ -44,7 +56,9 @@ async def generateResponse(user_id: str, user_message: str):
     # Store assistant's reply in conversation
     conv["messages"].append({
         "role": "model",  # Gemini uses "model" instead of "assistant"
-        "content": assistant_reply
+        "content": assistant_reply,
+        "updated_at": datetime.now(),
+        "created_at": datetime.now()
     })
     
     # Update conversation in database
@@ -57,3 +71,4 @@ async def generateResponse(user_id: str, user_message: str):
     return {
         "reply": assistant_reply
     }
+

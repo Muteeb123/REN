@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from routes.geminiRoutes import router as geminiRouter
+from routes.conversationRoutes import router as conversationRouter
 from dotenv import load_dotenv
 import uvicorn
 
@@ -8,7 +9,8 @@ load_dotenv()  # Load GEMINI_API_KEY from .env
 app = FastAPI()
 
 # Register routes
-app.include_router(geminiRouter, prefix="/api/gemini")
+app.include_router(geminiRouter, prefix="/api")
+app.include_router(conversationRouter, prefix="/api")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
