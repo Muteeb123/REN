@@ -1,8 +1,8 @@
 from google import genai
 from config.db import db
 
-client = genai.Client(api_key="AIzaSyCPLmB-ZguiFlZ3IRAew0qCjvTquv584PQ")
-MODEL_NAME = "gemini-2.5-flash"
+client = genai.Client(api_key="AIzaSyBbhTzOa19M8amMJj-jHzJ4WXsW14SqaQQ")
+MODEL_NAME = "gemma-3-27b-it"
 
 async def generateResponse(user_id: str, user_message: str):
 

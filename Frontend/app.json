@@ -1,10 +1,11 @@
 {
   "expo": {
-    "name": "reddit",
-    "slug": "snack-d755e0d4-b2ed-40b8-97fd-f244e3c88f32",
+    "name": "REN",
+    "slug": "reddit-emotion-navigator",
+    "scheme": "renapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ren.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {

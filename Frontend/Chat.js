@@ -76,7 +76,7 @@ export default function ChatPage({ navigation }) {
       console.log("Sending message to chat API:", userMessage.text);
 
       const userId = await AsyncStorage.getItem("userId");
-      const response = await fetch("http://192.168.18.131:8000/api/gemini/generateText", {
+      const response = await fetch("http://192.1.1.153:8000/api/gemini/generateText", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, message: userMessage.text }),

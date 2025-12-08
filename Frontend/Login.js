@@ -19,11 +19,15 @@ const REDDIT_AUTH_ENDPOINT = "https://www.reddit.com/api/v1/authorize";
 const REDDIT_TOKEN_ENDPOINT = "https://www.reddit.com/api/v1/access_token";
 const REDDIT_API_ME = "https://oauth.reddit.com/api/v1/me";
 
-const LOCAL_BASE_URL = "http://192.168.18.131:5000";
+const LOCAL_BASE_URL = "https://namely-finer-seasnail.ngrok-free.app";
 const BACKEND_LOGIN_URL = `${LOCAL_BASE_URL}/api/auth/login`;
 const BACKEND_SIGNUP_URL = `${LOCAL_BASE_URL}/api/auth/signup`;
 
-const REDIRECT_URI = makeRedirectUri({});
+// ⭐ CORRECT REDIRECT URI
+const REDIRECT_URI = "exp://xsvoa7q-muteeb1098-8081.exp.direct"
+
+console.log("Redirect URI being used:", REDIRECT_URI);
+
 const discovery = {
   authorizationEndpoint: REDDIT_AUTH_ENDPOINT,
   tokenEndpoint: REDDIT_TOKEN_ENDPOINT,
@@ -36,6 +40,7 @@ const colors = {
   buttonText: "#FFFFFF",
 };
 
+// Base64 for Reddit Basic Auth
 const base64Encode = (str) => {
   if (typeof btoa === "function") return btoa(str);
   console.error("btoa not available.");
@@ -57,8 +62,10 @@ const LoginScreen = () => {
     discovery
   );
 
+  // Exchange Reddit code for token
   const exchangeCodeForToken = async (code) => {
     setIsLoading(true);
+
     const basicAuth = base64Encode(`${REDDIT_CLIENT_ID}:`);
     const formData = new URLSearchParams();
     formData.append("grant_type", "authorization_code");
@@ -76,7 +83,7 @@ const LoginScreen = () => {
       });
 
       const tokenData = await res.json();
-      console.log(" Token Response:", tokenData);
+      console.log("Token Response:", tokenData);
 
       if (res.ok && tokenData.access_token) {
         await fetchRedditProfileAndSend(tokenData);
@@ -91,6 +98,7 @@ const LoginScreen = () => {
     }
   };
 
+  // Fetch Reddit profile → send to backend
   const fetchRedditProfileAndSend = async (tokenData) => {
     try {
       const profileRes = await fetch(REDDIT_API_ME, {
@@ -119,7 +127,7 @@ const LoginScreen = () => {
       const endpoint =
         authMode === "signup" ? BACKEND_SIGNUP_URL : BACKEND_LOGIN_URL;
 
-      console.log(`Sending payload to backend:`, payload);
+      console.log("Sending payload to backend:", payload);
 
       const backendRes = await fetch(endpoint, {
         method: "POST",
@@ -131,37 +139,35 @@ const LoginScreen = () => {
       console.log("Backend Response:", backendData);
 
       if (backendRes.ok) {
-        // Store the logged-in user's ID in AsyncStorage
+        // Save user ID globally
         await AsyncStorage.setItem("userId", backendData.user._id);
 
         alert(`${authMode === "login" ? "Logged in" : "Signed up"} successfully!`);
 
         if (authMode === "login") {
-          // Navigate to main app tabs after login
           navigation.replace("MainTabs");
-        } else if (authMode === "signup") {
-          // Navigate to personalization after signup
+        } else {
           navigation.replace("Personalization");
         }
       } else {
         alert(backendData.message || `Backend ${authMode} failed.`);
       }
-
     } catch (err) {
       console.error("❌ Error sending data to backend:", err);
       alert("Error sending data to backend.");
     }
   };
 
+  // Listen for OAuth response
   useEffect(() => {
     if (response?.type === "success") {
       const { code } = response.params;
-      console.log(" Authorization code received:", code);
+      console.log("Authorization code received:", code);
       exchangeCodeForToken(code);
     } else if (response?.type === "dismiss") {
       setIsLoading(false);
     } else if (response?.type === "error") {
-      console.error(" Auth error:", response.params);
+      console.error("Auth error:", response.params);
       setIsLoading(false);
     }
   }, [response]);
@@ -169,6 +175,7 @@ const LoginScreen = () => {
   const handleAuth = async (mode) => {
     setAuthMode(mode);
     setIsLoading(true);
+
     try {
       await promptAsync();
     } catch (err) {
