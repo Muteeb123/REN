@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema(
             min: 0,
         },
 
+        refreshToken: {
+            type: String,
+            required: false,
+        },
         // If you want to allow arbitrary extra fields in the future,
         // consider adding a `meta` object (optional). Commented out for now.
         // meta: {

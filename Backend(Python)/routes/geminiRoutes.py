@@ -11,6 +11,7 @@ class UserMessage(BaseModel):
 @router.post("/generateText")
 async def chat(msg: UserMessage):
     try:
+        print("Received message:", msg)
         response = await generateText(msg.user_id, msg.message)
         return response
     except Exception as e:

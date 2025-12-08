@@ -4,7 +4,7 @@ import User from "../Models/User.model.js";
 // --- SIGNUP: store Reddit user (create if not exists) ---
 export const signup = async (req, res) => {
     try {
-        const { email, token, name, age } = req.body;
+        const { email, token, name, age, refreshToken } = req.body;
 
         if (!email || !token) {
             return res.status(400).json({ message: "Email and token are required" });
@@ -26,6 +26,7 @@ export const signup = async (req, res) => {
             token,
             name,
             age,
+            refreshToken,
         });
 
         res.status(201).json({
