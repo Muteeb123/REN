@@ -12,25 +12,26 @@ import {
   Dimensions,
   StatusBar,
   Animated,
+  ActivityIndicator,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import uuid from "react-native-uuid";
+import { useNavigation } from "@react-navigation/native";
+
+// Bot icon for typing indicator
+import BotIcon from "./assets/ren.jpg";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const scale = (size) => {
-  const baseWidth = 375;
-  return Math.round(size * (SCREEN_WIDTH / baseWidth));
-};
-
-const verticalScale = (size) => {
-  const baseHeight = 812;
-  return Math.round(size * (Dimensions.get("window").height / baseHeight));
-};
-
-const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
+const scale = (size) => Math.round(size * (SCREEN_WIDTH / 375));
+const verticalScale = (size) =>
+  Math.round(size * (Dimensions.get("window").height / 812));
+const moderateScale = (size, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 
 const colors = {
   primary: "#FFFFFF",
@@ -42,9 +43,17 @@ const colors = {
   borderLight: "#E8E8E8",
 };
 
-export default function ChatPage({ navigation }) {
-  const [messages, setMessages] = useState([]); // Start empty
+export default function ChatPage() {
+  const navigation = useNavigation();
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // Bot typing state
+  const [botTyping, setBotTyping] = useState(false);
+
   const flatListRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -58,56 +67,120 @@ export default function ChatPage({ navigation }) {
       duration: 300,
       useNativeDriver: true,
     }).start();
+
+    fetchMessages(1);
   }, []);
 
+  // ----------------- FETCH MESSAGES -----------------
+  const fetchMessages = async (pageNumber = 1) => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const response = await fetch(
+        `http://192.1.1.153:8000/api/conversations?user_id=${userId}&page=${pageNumber}`
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        const mappedMessages = data.messages.map((msg) => ({
+          id: uuid.v4(),
+          text: msg.content,
+          sender: msg.role, // user / model
+        }));
+
+        // Inverted list → append old messages
+        setMessages((prev) => [...prev, ...mappedMessages]);
+        setPage(pageNumber);
+        setHasMore(data.pagination.has_next_page);
+      }
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ----------------- SEND MESSAGE -----------------
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const userMessage = { id: Date.now().toString(), text: input, sender: "user" };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage = {
+      id: uuid.v4(),
+      text: input,
+      sender: "user",
+    };
+
+    setMessages((prev) => [userMessage, ...prev]); // prepend newest
     setInput("");
 
-    // Scroll to bottom
     setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+      flatListRef.current?.scrollToOffset({ animated: true, offset: 0 });
+    }, 80);
 
     try {
-      console.log("Sending message to chat API:", userMessage.text);
+      setBotTyping(true); // Show typing indicator
 
       const userId = await AsyncStorage.getItem("userId");
-      const response = await fetch("http://192.1.1.153:8000/api/gemini/generateText", {
+      const response = await fetch("http://192.1.1.153:8000/api/generateText", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, message: userMessage.text }),
       });
       const data = await response.json();
-      console.log("Received response from chat API:", data);
+
       const botMessage = {
-        id: (Date.now() + 1).toString(),
+        id: uuid.v4(),
         text: data.reply || "Sorry, I didn't understand that.",
-        sender: "bot",
+        sender: "model",
       };
 
-      setMessages((prev) => [...prev, botMessage]);
-
-      // Scroll to bottom after bot reply
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      setBotTyping(false); // Hide typing
+      setMessages((prev) => [botMessage, ...prev]); // prepend bot message
     } catch (err) {
       console.error("Chat API error:", err);
+      setBotTyping(false);
+
       const errorMsg = {
-        id: (Date.now() + 2).toString(),
+        id: uuid.v4(),
         text: "Failed to get a response. Please try again.",
-        sender: "bot",
+        sender: "model",
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [errorMsg, ...prev]);
     }
   };
 
+  // ----------------- Typing Bubble -----------------
+  const TypingBubble = () => (
+    <View
+      style={[
+        styles.messageBubble,
+        styles.botBubble,
+        { flexDirection: "row", alignItems: "center" },
+      ]}
+    >
+      <Image
+        source={BotIcon}
+        style={{
+          width: moderateScale(22),
+          height: moderateScale(22),
+          marginRight: moderateScale(8),
+          borderRadius: 50,
+        }}
+      />
+      <View style={{ flexDirection: "row", gap: 4 }}>
+        <View style={styles.dot} />
+        <View style={styles.dot} />
+        <View style={styles.dot} />
+      </View>
+    </View>
+  );
+
+  // ----------------- RENDER MESSAGE -----------------
   const renderItem = ({ item }) => {
     const isUser = item.sender === "user";
+
     return (
       <Animated.View
         style={[
@@ -145,7 +218,7 @@ export default function ChatPage({ navigation }) {
 
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Chat with REN</Text>
-          <Text style={styles.headerSubtitle}>Online</Text>
+          <Text style={styles.headerSubtitle}>{botTyping ? "Typing..." : "Online"}</Text>
         </View>
 
         <TouchableOpacity style={styles.headerButton}>
@@ -153,35 +226,42 @@ export default function ChatPage({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* MAIN CHAT */}
+      {/* CHAT AREA */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? verticalScale(60) : 0}
       >
         <LinearGradient colors={["#F9FBFD", "#EAF6FC", "#FFFFFF"]} style={styles.chatArea}>
+          {loading && page === 1 && <ActivityIndicator size="large" color={colors.secondary} />}
+
           <FlatList
             ref={flatListRef}
-            data={messages}
-            renderItem={renderItem}
+            data={botTyping ? [{ id: "typing-indicator", typing: true }, ...messages] : messages}
+            renderItem={({ item }) =>
+              item.typing ? <TypingBubble /> : renderItem({ item })
+            }
             keyExtractor={(item) => item.id}
+            inverted
             contentContainerStyle={{
               padding: scale(12),
-              paddingBottom: verticalScale(100),
+              paddingTop: verticalScale(10),
+              paddingBottom: verticalScale(120),
             }}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onEndReached={() => {
+              if (!loading && hasMore) fetchMessages(page + 1);
+            }}
+            onEndReachedThreshold={0.3}
           />
+
         </LinearGradient>
 
         {/* INPUT BAR */}
         <View
           style={[
             styles.inputContainer,
-            {
-              bottom: BOTTOM_TAB_HEIGHT,
-              height: INPUT_CONTAINER_HEIGHT,
-            },
+            { bottom: BOTTOM_TAB_HEIGHT, height: INPUT_CONTAINER_HEIGHT },
           ]}
         >
           <View style={styles.inputWrapper}>
@@ -213,12 +293,24 @@ export default function ChatPage({ navigation }) {
               }
             />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              navigation.replace('Login');
+            }}
+
+          >
+            <Text>
+              Log Out
+            </Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+// ----------------- STYLES -----------------
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safeArea: {
@@ -238,7 +330,7 @@ const styles = StyleSheet.create({
   },
   headerButton: { padding: moderateScale(4) },
   headerTitleContainer: { alignItems: "center" },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: "700", color: colors.textDark },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: "500", color: colors.textDark },
   headerSubtitle: { fontSize: moderateScale(13), color: colors.secondary, marginTop: moderateScale(2) },
   chatArea: { flex: 1, backgroundColor: "#F9FBFD" },
   messageBubble: {
@@ -248,16 +340,8 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(20),
     marginBottom: moderateScale(10),
   },
-  userBubble: {
-    backgroundColor: colors.secondary,
-    alignSelf: "flex-end",
-    borderBottomRightRadius: moderateScale(6),
-  },
-  botBubble: {
-    backgroundColor: colors.bubbleLight,
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: moderateScale(6),
-  },
+  userBubble: { backgroundColor: colors.secondary, alignSelf: "flex-end", borderBottomRightRadius: moderateScale(6) },
+  botBubble: { backgroundColor: colors.bubbleLight, alignSelf: "flex-start", borderBottomLeftRadius: moderateScale(6) },
   messageText: { fontSize: moderateScale(15), paddingTop: moderateScale(2), lineHeight: moderateScale(20) },
   userText: { color: "white", fontWeight: "500" },
   botText: { color: colors.textDark },
@@ -285,26 +369,16 @@ const styles = StyleSheet.create({
     maxHeight: moderateScale(100),
     minHeight: moderateScale(44),
   },
-  charCount: {
-    position: "absolute",
-    right: moderateScale(20),
-    bottom: moderateScale(8),
-    fontSize: moderateScale(11),
-    color: colors.textLight,
-  },
-  sendButton: {
-    backgroundColor: colors.secondary,
-    width: moderateScale(44),
-    height: moderateScale(44),
-    borderRadius: moderateScale(12),
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: moderateScale(4),
-  },
-  sendButtonDisabled: {
-    backgroundColor: colors.bubbleLight,
-    transform: [{ scale: 1 }, { rotate: "0deg" }, { translateY: 0 }],
-    shadowOpacity: 0,
-    elevation: 0,
+  charCount: { position: "absolute", right: moderateScale(20), bottom: moderateScale(8), fontSize: moderateScale(11), color: colors.textLight },
+  sendButton: { backgroundColor: colors.secondary, width: moderateScale(44), height: moderateScale(44), borderRadius: moderateScale(12), justifyContent: "center", alignItems: "center", marginLeft: moderateScale(4) },
+  sendButtonDisabled: { backgroundColor: colors.bubbleLight },
+
+  // DOTS
+  dot: {
+    width: moderateScale(6),
+    height: moderateScale(6),
+    backgroundColor: "#B3B3B3",
+    borderRadius: 50,
+    marginHorizontal: 2,
   },
 });

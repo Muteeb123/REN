@@ -165,6 +165,7 @@ async def getConversationsWithMessages(user_id: str, page: int = 1, messages_per
             })
     
     # Calculate pagination
+    all_messages.sort(key=lambda x: x["created_at"], reverse=True)  
     total_messages = len(all_messages)
     total_pages = (total_messages + messages_per_page - 1) // messages_per_page  # Ceiling division
     

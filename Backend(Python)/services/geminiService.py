@@ -4,12 +4,12 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # loads .env into environment variables
+load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
-
+print("Loaded GEMINI_API_KEY:", API_KEY)
 client = genai.Client(api_key= API_KEY)
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemma-3-27b-it"
 
 async def generateResponse(user_id: str, user_message: str):
 

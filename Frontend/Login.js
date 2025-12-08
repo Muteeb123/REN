@@ -23,7 +23,6 @@ const LOCAL_BASE_URL = "https://namely-finer-seasnail.ngrok-free.app";
 const BACKEND_LOGIN_URL = `${LOCAL_BASE_URL}/api/auth/login`;
 const BACKEND_SIGNUP_URL = `${LOCAL_BASE_URL}/api/auth/signup`;
 
-// ⭐ CORRECT REDIRECT URI
 const REDIRECT_URI = "exp://xsvoa7q-muteeb1098-8081.exp.direct"
 
 console.log("Redirect URI being used:", REDIRECT_URI);
