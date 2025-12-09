@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   ScrollView,
   Dimensions,
-  StatusBar,
+
   Platform,
   Image,
 } from "react-native";
@@ -212,8 +212,6 @@ export default function Meditation() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.primary} />
-
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

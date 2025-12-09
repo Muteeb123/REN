@@ -141,7 +141,7 @@ const LoginScreen = () => {
         // Save user ID globally
         await AsyncStorage.setItem("userId", backendData.user._id);
 
-        alert(`${authMode === "login" ? "Logged in" : "Signed up"} successfully!`);
+
 
         if (authMode === "login") {
           navigation.replace("MainTabs");

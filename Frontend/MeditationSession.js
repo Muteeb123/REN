@@ -5,7 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  StatusBar,
+
   Animated,
   SafeAreaView,
   Platform,
@@ -59,7 +59,7 @@ export default function MeditationSession() {
   const [timeLeft, setTimeLeft] = useState(120);
   const [sessionActive, setSessionActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  
+
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -224,15 +224,14 @@ export default function MeditationSession() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.primary} />
-      
+
       <View style={styles.content}>
         {/* Session Info - Only show when session is not active */}
         {!sessionActive && (
-          <Animated.View 
+          <Animated.View
             style={[
               styles.sessionInfo,
-              { 
+              {
                 opacity: fadeAnim,
                 transform: [{
                   translateY: fadeAnim.interpolate({
@@ -248,10 +247,10 @@ export default function MeditationSession() {
         )}
 
         {/* Breathing Circle */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.breathingContainer,
-            { 
+            {
               opacity: fadeAnim,
               transform: [{
                 translateY: fadeAnim.interpolate({
@@ -273,18 +272,18 @@ export default function MeditationSession() {
                 }
               ]}
             />
-            
+
             {/* Main breathing circle */}
             <Animated.View
               style={[
                 styles.breathingCircle,
-                { 
+                {
                   transform: [{ scale: scaleAnim }],
                   backgroundColor: isBreathing ? colors.secondary : colors.accent,
                 },
               ]}
             />
-            
+
             {/* Inner circle with timer */}
             <Animated.View
               style={[
@@ -303,10 +302,10 @@ export default function MeditationSession() {
                 </View>
               ) : (
                 <View style={styles.readyContainer}>
-                  <Ionicons 
-                    name="play" 
-                    size={moderateScale(40)} 
-                    color={colors.secondary} 
+                  <Ionicons
+                    name="play"
+                    size={moderateScale(40)}
+                    color={colors.secondary}
                   />
                   <Text style={styles.readyText}>Ready</Text>
                 </View>
@@ -314,15 +313,15 @@ export default function MeditationSession() {
             </Animated.View>
           </View>
 
-       
+
         </Animated.View>
 
         {/* Duration Selection - Only show when session is not active */}
         {!sessionActive && (
-          <Animated.View 
+          <Animated.View
             style={[
               styles.durationSection,
-              { 
+              {
                 opacity: fadeAnim,
                 transform: [{
                   translateY: fadeAnim.interpolate({
@@ -363,10 +362,10 @@ export default function MeditationSession() {
         )}
 
         {/* Control Buttons - Positioned at bottom */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.controls,
-            { 
+            {
               opacity: fadeAnim,
               transform: [{
                 translateY: fadeAnim.interpolate({
@@ -378,7 +377,7 @@ export default function MeditationSession() {
           ]}
         >
           {!sessionActive ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.startButton,
                 !selectedDuration && styles.startButtonDisabled
@@ -387,42 +386,42 @@ export default function MeditationSession() {
               disabled={!selectedDuration}
             >
               <Text style={styles.startButtonText}>Begin Meditation</Text>
-              <Ionicons 
-                name="play" 
-                size={moderateScale(20)} 
-                color={colors.primary} 
+              <Ionicons
+                name="play"
+                size={moderateScale(20)}
+                color={colors.primary}
                 style={styles.startButtonIcon}
               />
             </TouchableOpacity>
           ) : (
-          <View style={styles.sessionControls}>
-  {/* Reset Button */}
-  <TouchableOpacity style={[styles.controlButton, styles.resetButton]} onPress={resetSession}>
-    <Ionicons name="refresh" size={moderateScale(18)} color={colors.textDark} />
-    <Text style={[styles.controlButtonText, styles.resetButtonText]}>Reset</Text>
-  </TouchableOpacity>
+            <View style={styles.sessionControls}>
+              {/* Reset Button */}
+              <TouchableOpacity style={[styles.controlButton, styles.resetButton]} onPress={resetSession}>
+                <Ionicons name="refresh" size={moderateScale(18)} color={colors.textDark} />
+                <Text style={[styles.controlButtonText, styles.resetButtonText]}>Reset</Text>
+              </TouchableOpacity>
 
-  {/* Pause/Resume Button (Primary) */}
-  <TouchableOpacity
-    style={[styles.controlButton, styles.pauseButton]}
-    onPress={isPaused ? resumeSession : pauseSession}
-  >
-    <Ionicons
-      name={isPaused ? "play" : "pause"}
-      size={moderateScale(20)}
-      color={colors.primary}
-    />
-    <Text style={[styles.controlButtonText, styles.pauseButtonText]}>
-      {isPaused ? "Resume" : "Pause"}
-    </Text>
-  </TouchableOpacity>
+              {/* Pause/Resume Button (Primary) */}
+              <TouchableOpacity
+                style={[styles.controlButton, styles.pauseButton]}
+                onPress={isPaused ? resumeSession : pauseSession}
+              >
+                <Ionicons
+                  name={isPaused ? "play" : "pause"}
+                  size={moderateScale(20)}
+                  color={colors.primary}
+                />
+                <Text style={[styles.controlButtonText, styles.pauseButtonText]}>
+                  {isPaused ? "Resume" : "Pause"}
+                </Text>
+              </TouchableOpacity>
 
-  {/* Stop Button */}
-  <TouchableOpacity style={[styles.controlButton, styles.stopButton]} onPress={handleSessionComplete}>
-    <Ionicons name="stop" size={moderateScale(18)} color={"#D64545"} />
-    <Text style={[styles.controlButtonText, styles.stopButtonText]}>End</Text>
-  </TouchableOpacity>
-</View>
+              {/* Stop Button */}
+              <TouchableOpacity style={[styles.controlButton, styles.stopButton]} onPress={handleSessionComplete}>
+                <Ionicons name="stop" size={moderateScale(18)} color={"#D64545"} />
+                <Text style={[styles.controlButtonText, styles.stopButtonText]}>End</Text>
+              </TouchableOpacity>
+            </View>
 
           )}
         </Animated.View>
@@ -664,7 +663,7 @@ const styles = StyleSheet.create({
   startButtonIcon: {
     marginLeft: moderateScale(4),
   },
-   sessionControls: {
+  sessionControls: {
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
