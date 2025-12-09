@@ -79,7 +79,7 @@ export default function ChatPage() {
     try {
       const userId = await AsyncStorage.getItem("userId");
       const response = await fetch(
-        `http://192.1.1.153:8000/api/conversations?user_id=${userId}&page=${pageNumber}`
+        `http://172.27.176.1:8000/api/conversations?user_id=${userId}&page=${pageNumber}`
       );
       const data = await response.json();
 
@@ -123,7 +123,7 @@ export default function ChatPage() {
       setBotTyping(true); // Show typing indicator
 
       const userId = await AsyncStorage.getItem("userId");
-      const response = await fetch("http://192.1.1.153:8000/api/generateText", {
+      const response = await fetch("http://172.27.176.1:8000/api/generateText", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, message: userMessage.text }),

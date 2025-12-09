@@ -19,7 +19,7 @@ const REDDIT_AUTH_ENDPOINT = "https://www.reddit.com/api/v1/authorize";
 const REDDIT_TOKEN_ENDPOINT = "https://www.reddit.com/api/v1/access_token";
 const REDDIT_API_ME = "https://oauth.reddit.com/api/v1/me";
 
-const LOCAL_BASE_URL = "https://namely-finer-seasnail.ngrok-free.app";
+const LOCAL_BASE_URL = "http://172.27.176.1:5000";
 const BACKEND_LOGIN_URL = `${LOCAL_BASE_URL}/api/auth/login`;
 const BACKEND_SIGNUP_URL = `${LOCAL_BASE_URL}/api/auth/signup`;
 
