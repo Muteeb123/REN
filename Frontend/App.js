@@ -7,6 +7,7 @@ import {
   Platform,
   SafeAreaView,
   Text,
+  StatusBar,
   useWindowDimensions,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
@@ -62,9 +63,11 @@ const responsiveFontSize = (size) => {
 const colors = {
   primary: "#FFFFFF",
   secondary: "#52ACD7",
+  statusbar: "#3093C2",
   textDark: "#1A1B1E",
   textLight: "#6E6E6E",
   background: "#F8FAFC",
+  focused: "#fff3b0",
 };
 
 // ✅ SafeScreenWrapper: keeps screens responsive and keyboard saf
@@ -103,6 +106,11 @@ const PlaceholderScreen = ({ title }) => {
   );
 };
 
+const withSafeArea = (title) => (
+  <SafeScreenWrapper>
+    <PlaceholderScreen title={title} />
+  </SafeScreenWrapper>
+);
 const JournalWithSafeArea = () => (
   <SafeScreenWrapper>
     <Journal />
@@ -121,6 +129,7 @@ const MeditationWithSafeArea = () => (
     <Meditation />
   </SafeScreenWrapper>
 );
+
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
@@ -147,52 +156,57 @@ function MainTabs() {
   };
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopWidth: moderateScale(1),
-          elevation: 0,
-          shadowOpacity: 0,
-          height: getTabBarHeight(),
-          paddingTop: moderateScale(8),
-          borderTopColor: "rgba(82, 172, 215, 0.1)",
-        },
-        tabBarIcon: ({ focused }) => {
-          const iconColor = focused ? colors.secondary : colors.textLight;
-          const iconSize = getIconSize();
+    <>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.primary}
+        translucent
+      />
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarHideOnKeyboard: true,
+          tabBarStyle: {
+            backgroundColor: colors.primary,
 
-          switch (route.name) {
-            case "Chat":
-              return <BotMessageSquare color={iconColor} size={iconSize} strokeWidth={2.3} />;
-            case "Journal":
-              return <LibraryBig color={iconColor} size={iconSize} strokeWidth={2.3} />;
-            case "Meditation":
-              return <SparklesIcon color={iconColor} size={iconSize} strokeWidth={2.3} />;
+            paddingTop: verticalScale(8),
 
-            case "Account":
-              return <HeartHandshake color={iconColor} size={iconSize} strokeWidth={2.3} />;
-            case "Settings":
-              return <Settings color={iconColor} size={iconSize} strokeWidth={2.3} />;
-            default:
-              return null;
-          }
-        },
-        tabBarActiveTintColor: colors.secondary,
-        tabBarInactiveTintColor: colors.textLight,
-      })}
-      initialRouteName="Chat"
-    >
-      <Tab.Screen name="Journal" component={JournalWithSafeArea} />
+            borderTopColor: "rgba(82, 172, 215, 0.1)",
+          },
+          tabBarIcon: ({ focused }) => {
+            const iconColor = focused ? colors.secondary : colors.textLight;
+            const iconSize = getIconSize();
 
-      <Tab.Screen name="Meditation" component={MeditationWithSafeArea} />
-      <Tab.Screen name="Chat" component={ChatWithSafeArea} />
-      <Tab.Screen name="Account" component={() => <PlaceholderScreen title="Account" />} />
-      <Tab.Screen name="Settings" component={() => <PlaceholderScreen title="Settings" />} />
-    </Tab.Navigator>
+            switch (route.name) {
+              case "Chat":
+                return <BotMessageSquare color={iconColor} size={iconSize} strokeWidth={2.3} />;
+              case "Journal":
+                return <LibraryBig color={iconColor} size={iconSize} strokeWidth={2.3} />;
+              case "Meditation":
+                return <SparklesIcon color={iconColor} size={iconSize} strokeWidth={2.3} />;
+
+              case "Account":
+                return <HeartHandshake color={iconColor} size={iconSize} strokeWidth={2.3} />;
+              case "Settings":
+                return <Settings color={iconColor} size={iconSize} strokeWidth={2.3} />;
+              default:
+                return null;
+            }
+          },
+          tabBarActiveTintColor: colors.secondary,
+          tabBarInactiveTintColor: colors.textLight,
+        })}
+        initialRouteName="Chat"
+      >
+        <Tab.Screen name="Journal" component={JournalWithSafeArea} />
+
+        <Tab.Screen name="Meditation" component={MeditationWithSafeArea} />
+        <Tab.Screen name="Chat" component={ChatWithSafeArea} />
+        <Tab.Screen name="Account" component={ChatWithSafeArea} />
+        <Tab.Screen name="Settings" component={ChatWithSafeArea} />
+      </Tab.Navigator>
+    </>
   );
 }
 
@@ -201,6 +215,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.primary}
+        translucent
+      />
       <NavigationContainer>
         <SafeAreaView style={[styles.safeArea, { minHeight: height }]}>
           <Stack.Navigator

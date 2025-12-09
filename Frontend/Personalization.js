@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -24,6 +25,7 @@ import {
   NunitoSans_800ExtraBold,
 } from '@expo-google-fonts/nunito-sans';
 import AppLoading from 'expo-app-loading';
+
 
 const FONT = {
   regular: 'NunitoSans_400Regular',
@@ -364,55 +366,58 @@ const Questionnaire = () => {
   if (!fontsLoaded) return <AppLoading />;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <>
 
-      {/* Progress Header */}
-      <View style={styles.progressHeader}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => step > 1 && setStep(step - 1)}
-          disabled={step === 1}>
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={step === 1 ? colors.border : colors.secondary}
-          />
-        </TouchableOpacity>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progress, { width: `${(step / 5) * 100}%` }]} />
-          </View>
-          <Text style={styles.stepText}>{step}/5</Text>
-        </View>
-      </View>
-
-      {/* Step Content */}
-      <View style={styles.content}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {renderStep()}
-        </ScrollView>
-      </View>
-
-      {/* Continue + Bottom Skip */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, isContinueDisabled() && styles.buttonDisabled]}
-          onPress={handleContinue}
-          disabled={isContinueDisabled()}>
-          <Text style={styles.buttonText}>{step === 5 ? 'Get Started' : 'Continue'}</Text>
-          <Ionicons name="arrow-forward" size={20} color={colors.buttonText} style={styles.buttonIcon} />
-        </TouchableOpacity>
-
-        {step < 5 && (
-          <TouchableOpacity style={styles.skipBottomButton} onPress={handleSkipAll}>
-            <Text style={styles.skipBottomText}>Skip</Text>
+        {/* Progress Header */}
+        <View style={styles.progressHeader}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => step > 1 && setStep(step - 1)}
+            disabled={step === 1}>
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={step === 1 ? colors.border : colors.secondary}
+            />
           </TouchableOpacity>
-        )}
-      </View>
-    </KeyboardAvoidingView>
+
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progress, { width: `${(step / 5) * 100}%` }]} />
+            </View>
+            <Text style={styles.stepText}>{step}/5</Text>
+          </View>
+        </View>
+
+        {/* Step Content */}
+        <View style={styles.content}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {renderStep()}
+          </ScrollView>
+        </View>
+
+        {/* Continue + Bottom Skip */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.button, isContinueDisabled() && styles.buttonDisabled]}
+            onPress={handleContinue}
+            disabled={isContinueDisabled()}>
+            <Text style={styles.buttonText}>{step === 5 ? 'Get Started' : 'Continue'}</Text>
+            <Ionicons name="arrow-forward" size={20} color={colors.buttonText} style={styles.buttonIcon} />
+          </TouchableOpacity>
+
+          {step < 5 && (
+            <TouchableOpacity style={styles.skipBottomButton} onPress={handleSkipAll}>
+              <Text style={styles.skipBottomText}>Skip</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </>
   );
 };
 
