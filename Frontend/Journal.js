@@ -15,10 +15,16 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import HTML from "react-native-render-html";
-import { PlusCircle, ArrowLeft, PencilLine } from "lucide-react-native";
+import { PlusCircle, ArrowLeft, PencilLine, PlusIcon } from "lucide-react-native";
 
 import { quillHTML } from "./quillhtml";
-const { width } = Dimensions.get("window");
+
+const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const BASE_WIDTH = 375;
+const BASE_HEIGHT = 812;
+const scale = (size) => Math.round((width / BASE_WIDTH) * size);
+const verticalScale = (size) => Math.round((SCREEN_HEIGHT / BASE_HEIGHT) * size);
+const moderateScale = (size, factor = 0.5) => Math.round(size + (scale(size) - size) * factor);
 
 const moods = [
   { label: "Happy", color: "#f9c84c", darkColor: "#d4a83a", lightColor: "#fff3b0", icon: require("./assets/Happy.png") },
@@ -28,7 +34,15 @@ const moods = [
   { label: "Annoyed", color: "#cb6ce6", darkColor: "#b259cc", lightColor: "#f2d9fa", icon: require("./assets/Annoyed.png") },
   { label: "Neutral", color: "#00bf63", darkColor: "#00a355", lightColor: "#c8f7dc", icon: require("./assets/Neutral.png") },
 ];
-
+const colors = {
+  primary: "#FFFFFF",
+  secondary: "#52ACD7",
+  textDark: "#1A1B1E",
+  textLight: "#6E6E6E",
+  bubbleLight: "#F2F2F2",
+  inputBackground: "#F8F8F8",
+  borderLight: "#E8E8E8",
+};
 export default function Journal() {
 
   const editorRef = useRef();
@@ -86,7 +100,11 @@ export default function Journal() {
     setSelectedMood(null);
     setView("list");
   };
-
+  const getPreviewHTML = (html) => {
+    if (!html) return "";
+    if (html.length <= 50) return html;
+    return html.substring(0, 50) + "...";
+  };
   const setQuillContent = (html) => {
     if (!editorRef.current) return;
 
@@ -115,7 +133,7 @@ export default function Journal() {
               setView("mood");
             }}
           >
-            <PencilLine color="#fff" size={24} />
+            <PlusIcon color="#fff" size={24} />
           </TouchableOpacity>
         </View>
 
@@ -132,7 +150,7 @@ export default function Journal() {
               <View style={styles.entryHeader}>
                 <View style={styles.moodBadge}>
                   <Image source={entry.mood.icon} style={styles.moodIconSmall} />
-                  <Text style={styles.entryTitle}>{entry.title}</Text>
+
                   <Text style={[styles.moodText, { color: entry.mood.darkColor, }]}>
                     {entry.mood.label}
                   </Text>
@@ -141,8 +159,8 @@ export default function Journal() {
               </View>
 
 
-
-              <HTML source={{ html: entry.text }} contentWidth={width} />
+              <Text style={styles.entryTitle}>{entry.title}</Text>
+              <HTML source={{ html: getPreviewHTML(entry.text) }} contentWidth={width} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -280,19 +298,8 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: moderateScale(16), paddingVertical: moderateScale(12), borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.primary },
+
   headerTitle: { fontSize: 26, fontWeight: "500", color: "#222" },
   headerButton: { backgroundColor: "#52ACD7", padding: 10, borderRadius: 50 },
 

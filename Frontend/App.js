@@ -168,14 +168,14 @@ function MainTabs() {
           tabBarShowLabel: false,
           tabBarHideOnKeyboard: true,
           tabBarStyle: {
-            backgroundColor: colors.secondary,
+            backgroundColor: colors.primary,
 
             paddingTop: verticalScale(8),
 
             borderTopColor: "rgba(82, 172, 215, 0.1)",
           },
           tabBarIcon: ({ focused }) => {
-            const iconColor = focused ? colors.focused : colors.primary;
+            const iconColor = focused ? colors.secondary : colors.textLight;
             const iconSize = getIconSize();
 
             switch (route.name) {

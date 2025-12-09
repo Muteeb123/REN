@@ -23,7 +23,7 @@ import uuid from "react-native-uuid";
 import { useNavigation } from "@react-navigation/native";
 
 // local asset
-import BotIcon from "./assets/ren.jpg";
+import BotIcon from "./assets/logo.png";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
