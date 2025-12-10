@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -12,12 +12,18 @@ import {
   StatusBar,
   SafeAreaView,
   Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { WebView } from "react-native-webview";
+
 import HTML from "react-native-render-html";
-import { PlusCircle, ArrowLeft, PencilLine, PlusIcon } from "lucide-react-native";
+import { PlusCircle, ArrowLeft, PencilLine, PlusIcon, Trash2, CheckIcon } from "lucide-react-native";
 
 import { quillHTML } from "./quillhtml";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -34,6 +40,10 @@ const moods = [
   { label: "Annoyed", color: "#cb6ce6", darkColor: "#b259cc", lightColor: "#f2d9fa", icon: require("./assets/Annoyed.png") },
   { label: "Neutral", color: "#00bf63", darkColor: "#00a355", lightColor: "#c8f7dc", icon: require("./assets/Neutral.png") },
 ];
+
+const getMood = (label) => {
+  return moods.find((mood) => mood.label.toLowerCase() === (label || "").toLowerCase());
+}
 const colors = {
   primary: "#FFFFFF",
   secondary: "#52ACD7",
@@ -46,14 +56,14 @@ const colors = {
 export default function Journal() {
 
   const editorRef = useRef();
-
+  const BASE_URL = "https://namely-finer-seasnail.ngrok-free.app/api/journal";
   const [view, setView] = useState("list");
   const [selectedMood, setSelectedMood] = useState(null);
   const [note, setNote] = useState("");
   const [title, setTitle] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
-
+  const navigation = useNavigation();
   const [entries, setEntries] = useState([
     {
       id: 1,
@@ -64,11 +74,64 @@ export default function Journal() {
     },
   ]);
 
-  const handleSave = () => {
-    if (!note.trim() || !title.trim()) return;
+  const [loadingFetch, setLoadingFetch] = useState(false);
+  const [loadingSave, setLoadingSave] = useState(false);
+  const [loadingDeleteId, setLoadingDeleteId] = useState(null);
 
+  useEffect(() => {
+    const fetchEntries = async () => {
+      setLoadingFetch(true);
+      const user_id = await AsyncStorage.getItem("userId");
+      try {
+        const response = await fetch(`${BASE_URL}/get/${user_id}`, {
+          method: "GET",
+        });
+        const json = await response.json();
+        if (json && Array.isArray(json)) {
+          const fetchedEntries = json.map((entry) => ({
+            id: entry._id,
+            title: entry.title,
+            text: entry.content,
+            mood: getMood(entry.sentiment) || moods[5],
+            date: new Date(entry.updatedAt).toLocaleString(),
+          }));
+          setEntries(fetchedEntries);
+        }
+      } catch (err) {
+        console.error("Error fetching journal entries:", err);
+      } finally {
+        setLoadingFetch(false);
+      }
+    };
+
+    fetchEntries();
+  }, []);
+
+  const handleSave = async () => {
+    if (!note.trim() || !title.trim()) return;
+    setLoadingSave(true);
     if (editingEntry) {
-      // UPDATE MODE
+      const user_id = await AsyncStorage.getItem("userId");
+      const payload =
+      {
+        user_id,
+        id: editingEntry.id,
+        title: title.trim(),
+        content: note.trim(),
+        sentiment: selectedMood?.label,
+      }
+      try {
+        const response = await fetch(`${BASE_URL}/update`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await response.json();
+        console.log("Update response:", json);
+      } catch (error) {
+        console.error("Error updating journal entry:", error);
+      }
+
       const updated = entries.map((item) =>
         item.id === editingEntry.id
           ? {
@@ -84,22 +147,56 @@ export default function Journal() {
       setEntries(updated);
       setEditingEntry(null);
     } else {
-      // NEW ENTRY MODE
-      const newEntry = {
-        id: Date.now(),
-        title: title.trim(),
-        text: note.trim(),
-        mood: selectedMood,
-        date: new Date().toLocaleString(),
-      };
-      setEntries([newEntry, ...entries]);
+      const user_id = await AsyncStorage.getItem("userId");
+      try {
+        const response = await fetch(`${BASE_URL}/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user_id,
+            title: title.trim(),
+            content: note.trim(),
+            sentiment: selectedMood?.label,
+          }),
+        });
+        const json = await response.json();
+        const newEntry = {
+          id: json._id || Math.random().toString(),
+          title: title.trim(),
+          text: note.trim(),
+          mood: selectedMood,
+          date: new Date().toLocaleString(),
+        };
+        setEntries([newEntry, ...entries]);
+      } catch (error) {
+        console.error("Error creating journal entry:", error);
+      }
     }
 
     setTitle("");
     setNote("");
     setSelectedMood(null);
     setView("list");
+    setLoadingSave(false);
   };
+
+  const deleteEntry = async (entryId) => {
+    setLoadingDeleteId(entryId);
+    try {
+      await fetch(`${BASE_URL}/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: entryId }),
+      });
+      const filtered = entries.filter((e) => e.id !== entryId);
+      setEntries(filtered);
+    } catch (error) {
+      console.error("Error deleting entry:", error);
+    } finally {
+      setLoadingDeleteId(null);
+    }
+  };
+
   const getPreviewHTML = (html) => {
     if (!html) return "";
     if (html.length <= 50) return html;
@@ -107,7 +204,6 @@ export default function Journal() {
   };
   const setQuillContent = (html) => {
     if (!editorRef.current) return;
-
     const js = `
     const msg = { type: "set-content", html: ${JSON.stringify(html)} };
     document.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(msg) }));
@@ -117,14 +213,14 @@ export default function Journal() {
   };
   const openEntryForEdit = (entry) => {
     setEditingEntry(entry);
-    setView("mood"); // force mood selection (Option B)
+    setView("mood");
   };
 
-  // 🧭 LIST VIEW
   if (view === "list") {
     return (
       <SafeAreaView style={styles.safeContainer}>
         <View style={styles.header}>
+
           <Text style={styles.headerTitle}>My Journal</Text>
           <TouchableOpacity
             style={styles.headerButton}
@@ -132,47 +228,85 @@ export default function Journal() {
               setEditingEntry(null);
               setView("mood");
             }}
+            disabled={loadingFetch}
           >
             <PlusIcon color="#fff" size={24} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {entries.map((entry) => (
-            <TouchableOpacity
-              key={entry.id}
-              onPress={() => openEntryForEdit(entry)}
-              style={[
-                styles.entryCard,
-                { backgroundColor: entry.mood.lightColor, borderLeftColor: entry.mood.color },
-              ]}
-            >
-              <View style={styles.entryHeader}>
-                <View style={styles.moodBadge}>
-                  <Image source={entry.mood.icon} style={styles.moodIconSmall} />
+        {loadingFetch ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" />
+          </View>
+        ) : (
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {entries.map((entry) => (
+              <TouchableOpacity
+                key={entry.id}
+                style={[
+                  styles.entryCard,
+                  { backgroundColor: entry.mood.lightColor, borderLeftColor: entry.mood.color },
+                ]}
 
-                  <Text style={[styles.moodText, { color: entry.mood.darkColor, }]}>
-                    {entry.mood.label}
-                  </Text>
+                onPress={() => openEntryForEdit(entry)}
+              >
+                <View style={styles.entryHeader}>
+                  <View style={styles.moodBadge}>
+                    <Image source={entry.mood.icon} style={styles.moodIconSmall} />
+                    <Text style={[styles.moodText, { color: entry.mood.darkColor, }]}>
+                      {entry.mood.label}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={styles.dateText}>{entry.date}</Text>
+
+                    <TouchableOpacity
+                      onPress={() =>
+                        Alert.alert(
+                          "Delete entry",
+                          "Are you sure you want to delete this entry?",
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Delete",
+                              style: "destructive",
+                              onPress: () => deleteEntry(entry.id),
+                            },
+                          ]
+                        )
+                      }
+                      style={{ marginLeft: 12 }}
+                      disabled={loadingDeleteId === entry.id}
+                    >
+                      {loadingDeleteId === entry.id ? (
+                        <ActivityIndicator />
+                      ) : (
+                        <Trash2 color={entry.mood.darkColor} size={18} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <Text style={styles.dateText}>{entry.date}</Text>
-              </View>
 
-
-              <Text style={styles.entryTitle}>{entry.title}</Text>
-              <HTML source={{ html: getPreviewHTML(entry.text) }} contentWidth={width} />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <TouchableOpacity onPress={() => openEntryForEdit(entry)}>
+                  <Text style={styles.entryTitle}>{entry.title}</Text>
+                  <HTML source={{ html: getPreviewHTML(entry.text) }} contentWidth={width} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </SafeAreaView>
     );
   }
 
-  // 😌 MOOD SELECTION
   if (view === "mood") {
     return (
       <SafeAreaView style={styles.safeContainer}>
+
         <View style={styles.moodContainer}>
+          <TouchableOpacity onPress={() => setView("list")} >
+            <Ionicons name="arrow-back" size={scale(22)} color={colors.textDark} />
+          </TouchableOpacity>
           <Text style={styles.title}>How are you feeling?</Text>
           <Text style={styles.subtitle}>Pick your current mood</Text>
 
@@ -183,17 +317,13 @@ export default function Journal() {
                 style={[styles.moodItem, { backgroundColor: mood.color + "20" }]}
                 onPress={() => {
                   setSelectedMood(mood);
-
                   if (editingEntry) {
-                    // PRE-FILL DATA FOR EDITING
                     setTitle(editingEntry.title);
                     setNote(editingEntry.text);
-
                   } else {
-                    setTitle("");
+                    setTitle("Untitled");
                     setNote("");
                   }
-
                   setView("new");
                 }}
               >
@@ -209,14 +339,12 @@ export default function Journal() {
     );
   }
 
-  // 📝 NEW / EDIT ENTRY VIEW
   return (
-    <SafeAreaView style={[styles.safeContainer, { backgroundColor: selectedMood.color + "10" }]}>
+    <SafeAreaView style={[styles.safeContainer, { backgroundColor: selectedMood?.color + "10" }]}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Custom Header */}
         <View style={styles.journalHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -224,24 +352,41 @@ export default function Journal() {
               setView("list");
             }}
           >
-            <ArrowLeft color={selectedMood.darkColor} size={26} />
+            <ArrowLeft color={selectedMood?.darkColor || "#000"} size={26} />
           </TouchableOpacity>
 
-
-          {/* Editable Title */}
-
-          {/* Mood Badge */}
           <View style={[styles.moodHeader, { marginLeft: 10 }]}>
-            <Image source={selectedMood.icon} style={styles.moodIconSmall} />
-
-            <Text style={[styles.moodTitle, { color: selectedMood.darkColor }]}>
-              {selectedMood.label}
+            {selectedMood && <Image source={selectedMood.icon} style={styles.moodIconSmall} />}
+            <Text style={[styles.moodTitle, { color: selectedMood?.darkColor || "#000" }]}>
+              {selectedMood?.label}
             </Text>
           </View>
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              {
+                backgroundColor: "transparent" || "#999",
+                opacity: note.trim() && !loadingSave ? 1 : 0.6,
+              },
+            ]}
+            onPress={handleSave}
+            disabled={!note.trim() || loadingSave}
+          >
+            {loadingSave ? (
+              <ActivityIndicator style={[styles.saveButton,
+              {
+                backgroundColor: "transparent" || "#999",
+
+              },]} />
+            ) : (
+              <Text style={[styles.saveText, { alignItems: "end" }]}>
+                <CheckIcon color={selectedMood?.darkColor} size={35} />
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         <View style={{ flex: 1, height: "100%", marginTop: 10 }}>
-
           {isEditingTitle ? (
             <TextInput
               autoFocus
@@ -249,16 +394,15 @@ export default function Journal() {
               onChangeText={setTitle}
               onBlur={() => setIsEditingTitle(false)}
               placeholder="Entry Title..."
-              style={[styles.titleInput, { color: selectedMood.darkColor }]}
+              style={[styles.titleInput, { color: selectedMood?.darkColor || "#000" }]}
             />
           ) : (
             <TouchableOpacity onPress={() => setIsEditingTitle(true)}>
-              <Text style={[styles.titleLabel, { color: selectedMood.darkColor }]}>
-                {title || "Untitled"}
+              <Text style={[styles.titleLabel, { color: selectedMood?.darkColor || "#000" }]}>
+                {title}
               </Text>
             </TouchableOpacity>
           )}
-
 
           <WebView
             ref={editorRef}
@@ -267,35 +411,24 @@ export default function Journal() {
             onMessage={(e) => setNote(e.nativeEvent.data)}
             javaScriptEnabled
             domStorageEnabled
-            style={{ backgroundColor: "transparent" }}
+            style={{ backgroundColor: "transparent", flex: 1 }}
             onLoadEnd={() => setQuillContent(editingEntry ? editingEntry.text : "")}
             marginTop={20}
           />
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: selectedMood.darkColor, opacity: note.trim() && title.trim() ? 1 : 0.5 },
-          ]}
-          onPress={handleSave}
-          disabled={!note.trim() || !title.trim()}
-        >
-          <Text style={styles.saveText}>
-            {editingEntry ? "Update Entry" : "Save Entry"}
-          </Text>
-        </TouchableOpacity>
+
       </KeyboardAvoidingView>
     </SafeAreaView >
   );
 }
 
-// 🎨 Styles
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: "#F5F9F3",
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+
   },
 
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: moderateScale(16), paddingVertical: moderateScale(12), borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.primary },
@@ -308,12 +441,14 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderRadius: 14,
     padding: 16,
+
     marginBottom: 14,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+
   },
 
   entryHeader: {
@@ -368,7 +503,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    paddingTop: 50,
+
     gap: 10,
   },
 
@@ -386,13 +521,15 @@ const styles = StyleSheet.create({
   },
 
   saveButton: {
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 5,
+
   },
   saveText: { color: "#fff", fontSize: 17, fontWeight: "600" },
 
-  moodHeader: { flexDirection: "row", alignItems: "center", marginLeft: 12 },
+  moodHeader: { flexDirection: "row", alignItems: "center", marginLeft: 12, flex: 1 },
   moodTitle: { fontSize: 18, fontWeight: "700", marginLeft: 6 },
+
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
