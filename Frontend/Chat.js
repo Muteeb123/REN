@@ -102,7 +102,7 @@ export default function ChatPage() {
     setLoading(true);
     try {
       const userId = await AsyncStorage.getItem("userId");
-      const res = await fetch(`http://192.168.18.131:8000/api/conversations?user_id=${userId}&page=${pageNumber}`);
+      const res = await fetch(`http://172.27.176.1:8000/api/conversations?user_id=${userId}&page=${pageNumber}`);
       const data = await res.json();
 
       if (data?.success && Array.isArray(data.messages)) {
@@ -131,7 +131,7 @@ export default function ChatPage() {
     try {
       setBotTyping(true);
       const userId = await AsyncStorage.getItem("userId");
-      const res = await fetch("http://192.168.18.131:8000/api/generateText", {
+      const res = await fetch("http://172.27.176.1:8000/api/generateText", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, message: trimmed }),
