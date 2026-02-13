@@ -17,11 +17,12 @@ import {
     REDDIT_AUTH_ENDPOINT,
     REDDIT_TOKEN_ENDPOINT,
     REDIRECT_URI,
+    REDDIT_CLIENT_ID,
+
 } from "../config/urls";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const REDDIT_CLIENT_ID = "UJrTPUb0qwYTcKXFcJX93A";
 const BACKEND_LOGIN_URL = `${NODE_BACKEND_URL}/api/auth/login`;
 const BACKEND_SIGNUP_URL = `${NODE_BACKEND_URL}/api/auth/signup`;
 console.log("Backend Login URL:", BACKEND_LOGIN_URL);
@@ -189,7 +190,7 @@ const LoginScreen = () => {
         console.log("Rendering Login Screen", BACKEND_LOGIN_URL) || <View style={styles.container}>
             <View style={styles.centerContent}>
                 <Image source={require("../../assets/logo.png")} style={styles.logo} />
-                <Text style={styles.heading}>Let's get stasdsadsdsadsarted</Text>
+                <Text style={styles.heading}>Let's get started</Text>
                 <Text style={styles.subheading}>Log in or sign up using Reddit</Text>
 
                 {isLoading ? (
