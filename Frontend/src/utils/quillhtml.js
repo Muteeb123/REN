@@ -1,10 +1,12 @@
+import { QUILL_CSS_URL, QUILL_JS_URL } from "../config/urls";
+
 export const quillHTML = `
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <link href="${QUILL_CSS_URL}" rel="stylesheet">
 
     <style>
       body {
@@ -48,7 +50,7 @@ export const quillHTML = `
 
     <div id="editor"></div>
 
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="${QUILL_JS_URL}"></script>
 
    <script>
   const quill = new Quill("#editor", {
