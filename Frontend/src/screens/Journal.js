@@ -14,8 +14,10 @@ import {
     Image,
     ActivityIndicator,
     Alert,
+    useWindowDimensions,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HTML from "react-native-render-html";
 import {
@@ -32,6 +34,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NODE_BACKEND_URL } from "../config/urls";
+import Header from "../components/Header";
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -100,9 +103,11 @@ const colors = {
     inputBackground: "#F8F8F8",
     borderLight: "#E8E8E8",
 };
-export default function Journal() {
+export default function Journal({ currentScreen, onNavigate }) {
     const editorRef = useRef();
     const BASE_URL = `${NODE_BACKEND_URL}/api/journal`;
+    const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [view, setView] = useState("list");
     // Set the default mood to 'Neutral' upon initial load
     const [selectedMood, setSelectedMood] = useState(moods[5]);
@@ -110,7 +115,7 @@ export default function Journal() {
     const [title, setTitle] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editingEntry, setEditingEntry] = useState(null);
-    const navigation = useNavigation();
+
     const [entries, setEntries] = useState([
         {
             id: 1,
@@ -279,26 +284,37 @@ export default function Journal() {
         setView("new");
     };
 
+    const handleNavigateToScreen = (screenName) => {
+        setCurrentScreen(screenName);
+        navigation.navigate(screenName);
+    };
+
     if (view === "list") {
         return (
             <SafeAreaView style={styles.safeContainer}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>My Journal</Text>
-                    <TouchableOpacity
-                        style={styles.headerButton}
-                        onPress={startNewEntry}
-                        disabled={loadingFetch}
-                    >
-                        <PlusIcon color="#fff" size={24} />
-                    </TouchableOpacity>
-                </View>
+                <Header
+                    title="Journals"
+                    titleAlignment="center"
+                    showRightIcon={true}
+                    rightIconName="add-circle"
+                    rightIconColor="#52ACD7"
+                    onRightIconPress={startNewEntry}
+                    backgroundColor="#FFFFFF"
+                    borderBottomColor="rgba(82, 172, 215, 0.1)"
+                    rightIconSize={40}
+                    textSize={25}
+                />
 
                 {loadingFetch ? (
                     <View style={styles.centered}>
                         <ActivityIndicator size="large" />
                     </View>
                 ) : (
-                    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    <ScrollView
+                        style={styles.scrollViewContainer}
+                        contentContainerStyle={styles.scrollViewContent}
+                        showsVerticalScrollIndicator={false}
+                    >
                         {entries.map((entry) => (
                             <TouchableOpacity
                                 key={entry.id}
@@ -514,20 +530,18 @@ const styles = StyleSheet.create({
     },
 
     header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: moderateScale(16),
-        paddingVertical: moderateScale(12),
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-        backgroundColor: colors.primary,
+        display: "none",
     },
+    headerTitle: { display: "none" },
+    headerButton: { display: "none" },
 
-    headerTitle: { fontSize: 26, fontWeight: "500", color: "#222" },
-    headerButton: { backgroundColor: "#52ACD7", padding: 10, borderRadius: 50 },
-
-    scrollView: { padding: 16 },
+    scrollViewContainer: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        padding: 16,
+        paddingBottom: moderateScale(12),
+    },
     entryCard: {
         borderLeftWidth: 3,
         borderRadius: 14,

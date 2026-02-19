@@ -10,9 +10,12 @@ import {
     Dimensions,
     Platform,
     Image,
+    useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Header from "../components/Header";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -119,8 +122,9 @@ const meditationData = {
     ],
 };
 
-export default function Meditation() {
+export default function Meditation({ currentScreen, onNavigate }) {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [selectedCategory, setSelectedCategory] = useState("All");
 
     // Calculate dynamic dimensions based on screen size
@@ -209,28 +213,19 @@ export default function Meditation() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.headerButton}
-                >
-                    <Ionicons
-                        name="arrow-back"
-                        size={moderateScale(22)}
-                        color={colors.textDark}
-                    />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Meditations</Text>
-                <TouchableOpacity style={styles.headerButton}>
-                    <Ionicons
-                        name="search-outline"
-                        size={moderateScale(22)}
-                        color={colors.textDark}
-                    />
-                </TouchableOpacity>
-            </View>
+
+        <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+            <Header
+                title="Meditations"
+                titleAlignment="center"
+                showLeftIcon={false}
+                showRightIcon={true}
+                rightIconName="search-outline"
+                onRightIconPress={() => console.log("Search")}
+                backgroundColor="#FFFFFF"
+                borderBottomColor="rgba(82, 172, 215, 0.1)"
+                rightIconSize={32}
+            />
 
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
@@ -252,14 +247,11 @@ export default function Meditation() {
                             {meditationData.featured.duration}
                         </Text>
 
-                        <FlatList
-                            data={meditationData.featured.categories}
-                            renderItem={renderCategoryPill}
-                            keyExtractor={(item) => item}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.categoriesList}
-                        />
+                        <View style={styles.featuredDividerRow}>
+                            <View style={[styles.featuredDividerPart, styles.featuredDividerSmall, styles.featuredDividerBlue]} />
+                            <View style={[styles.featuredDividerPart, styles.featuredDividerMedium, styles.featuredDividerWhite]} />
+                            <View style={[styles.featuredDividerPart, styles.featuredDividerLarge, styles.featuredDividerWhite]} />
+                        </View>
 
                         <TouchableOpacity
                             style={styles.startButton}
@@ -292,35 +284,14 @@ export default function Meditation() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
-        marginTop: 30
+        backgroundColor: colors.background
     },
     scrollContainer: {
         paddingBottom: verticalScale(40),
     },
-    header: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingHorizontal: moderateScale(20),
-        paddingVertical: moderateScale(12),
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-        backgroundColor: colors.primary,
-    },
-    headerButton: {
-        padding: moderateScale(8),
-        minWidth: moderateScale(44),
-        minHeight: moderateScale(44),
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    headerTitle: {
-        fontSize: getFontSize(20),
-        fontWeight: "700",
-        color: colors.textDark,
-        textAlign: "center",
-    },
+    header: { display: "none" },
+    headerButton: { display: "none" },
+    headerTitle: { display: "none" },
 
     // Featured Card
     featuredCard: {
@@ -357,6 +328,32 @@ const styles = StyleSheet.create({
         fontSize: getFontSize(14),
         color: colors.textDark,
         marginBottom: verticalScale(12)
+    },
+    featuredDividerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        height: scale(5),
+        marginBottom: verticalScale(2),
+        gap: moderateScale(4),
+    },
+    featuredDividerPart: {
+        height: scale(12),
+        borderRadius: scale(8),
+    },
+    featuredDividerSmall: {
+        flex: 1.5,
+    },
+    featuredDividerMedium: {
+        flex: 2.5,
+    },
+    featuredDividerLarge: {
+        flex: 3,
+    },
+    featuredDividerBlue: {
+        backgroundColor: colors.secondary,
+    },
+    featuredDividerWhite: {
+        backgroundColor: colors.primary,
     },
 
     categoriesContainer: {

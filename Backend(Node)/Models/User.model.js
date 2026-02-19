@@ -11,14 +11,13 @@ const userSchema = new mongoose.Schema(
             trim: true,
         },
 
-        // Token will store your auth token (JWT or provider token).
-        // Marked required as you requested.
+
         token: {
             type: String,
             required: [true, "Token is required"],
         },
 
-        // Optional fields
+
         name: {
             type: String,
             required: false,
@@ -31,19 +30,40 @@ const userSchema = new mongoose.Schema(
             min: 0,
         },
 
+        gender: {
+            type: String,
+            required: false,
+            enum: ["Male", "Female", "Prefer not to say"],
+        },
+
+        goals: {
+            type: [String],
+            default: [],
+        },
+
+        causes: {
+            type: [String],
+            default: [],
+        },
+
         refreshToken: {
             type: String,
             required: false,
         },
-        // If you want to allow arbitrary extra fields in the future,
-        // consider adding a `meta` object (optional). Commented out for now.
-        // meta: {
-        //   type: mongoose.Schema.Types.Mixed,
-        //   default: {},
-        // },
+
+        personalized: {
+            type: Boolean,
+            default: false,
+        },
+        preferredName: {
+            type: String,
+            required: false,
+            trim: true,
+        }
+
     },
     {
-        timestamps: true, // createdAt, updatedAt
+        timestamps: true,
         versionKey: false,
     }
 );

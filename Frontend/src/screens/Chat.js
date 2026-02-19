@@ -13,6 +13,7 @@ import {
     ActivityIndicator,
     Image,
     Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +25,7 @@ import { useNavigation } from "@react-navigation/native";
 // local asset
 import BotIcon from "../../assets/logo.png";
 import { PYTHON_BACKEND_URL } from "../config/urls";
+import Header from "../components/Header";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -78,7 +80,7 @@ const MessageBubble = React.memo(({ text, isUser, animatedValue }) => {
 });
 
 // ======== Main ChatPage ========
-export default function ChatPage() {
+export default function ChatPage({ currentScreen, onNavigate }) {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const base_url = PYTHON_BACKEND_URL;
@@ -160,22 +162,24 @@ export default function ChatPage() {
     const dataForList = botTyping ? [{ id: "typing-indicator", typing: true }, ...messages] : messages;
 
     return (
-        <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top }]}>
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.headerButton}>
-                    <Ionicons name="arrow-back" size={scale(22)} color={colors.textDark} />
-                </TouchableOpacity>
-
-                <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Chat with REN</Text>
-                    <Text style={styles.headerSubtitle}>{botTyping ? "Typing..." : "Online"}</Text>
-                </View>
-
-                <TouchableOpacity style={styles.headerButton} onPress={() => navigation.replace("Login")}>
-                    <Ionicons name="settings-outline" size={scale(22)} color={colors.textDark} />
-                </TouchableOpacity>
-            </View>
+            <Header
+                title="Chat with REN"
+                titleAlignment="center"
+                subtitleText={botTyping ? "Typing..." : "Online"}
+                subtitleColor="#52ACD7"
+                showLeftIcon={false}
+                leftIconName="arrow-back"
+                onLeftIconPress={() => { }}
+                showRightIcon={true}
+                rightIconName="settings-outline"
+                onRightIconPress={() => { }}
+                backgroundColor="#FFFFFF"
+                borderBottomColor="rgba(82, 172, 215, 0.1)"
+                rightIconSize={30}
+                textSize={22}
+            />
 
             {/* Chat Area */}
             <KeyboardAvoidingView
@@ -228,11 +232,11 @@ export default function ChatPage() {
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: "#F5F9F3" },
     flex: { flex: 1 },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: moderateScale(16), paddingVertical: moderateScale(12), borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.primary },
-    headerButton: { padding: moderateScale(4) },
-    headerTitleContainer: { alignItems: "center" },
-    headerTitle: { fontSize: moderateScale(18), fontWeight: "500", color: colors.textDark },
-    headerSubtitle: { fontSize: moderateScale(13), color: colors.secondary, marginTop: moderateScale(2) },
+    header: { display: "none" },
+    headerButton: { display: "none" },
+    headerTitleContainer: { display: "none" },
+    headerTitle: { display: "none" },
+    headerSubtitle: { display: "none" },
     messageBubble: { maxWidth: "80%", paddingHorizontal: moderateScale(16), paddingVertical: moderateScale(10), borderRadius: moderateScale(20), marginBottom: moderateScale(10) },
     userBubble: { backgroundColor: colors.secondary, alignSelf: "flex-end", borderBottomRightRadius: moderateScale(6) },
     botBubble: { backgroundColor: colors.bubbleLight, alignSelf: "flex-start", borderBottomLeftRadius: moderateScale(6) },

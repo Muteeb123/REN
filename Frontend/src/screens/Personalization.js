@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NODE_BACKEND_URL } from "../config/urls";
 
 // Google Fonts
 import {
@@ -67,6 +69,7 @@ const Questionnaire = () => {
         goals: [],
         causes: [],
     });
+    const [isSaving, setIsSaving] = useState(false);
 
     const scrollY = useState(new Animated.Value(0))[0];
     const ages = Array.from({ length: 40 }, (_, i) => 18 + i);
@@ -98,16 +101,69 @@ const Questionnaire = () => {
         });
     };
 
-    const handleContinue = () => {
+    const savePersonalization = async () => {
+        setIsSaving(true);
+        try {
+            const userId = await AsyncStorage.getItem("userId");
+            if (!userId) {
+                alert("User not found. Please login again.");
+                setIsSaving(false);
+                return false;
+            }
+
+            const response = await fetch(`${NODE_BACKEND_URL}/api/user/personalize`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId,
+                    name: answers.name,
+                    gender: answers.gender,
+                    age: answers.age,
+                    goals: answers.goals,
+                    causes: answers.causes,
+                }),
+            });
+
+            const data = await response.json();
+            console.log("Personalization Response:", data);
+
+            if (response.ok) {
+                // Update cached user with personalized = true
+                const cachedUser = await AsyncStorage.getItem("cachedUser");
+                if (cachedUser) {
+                    const parsed = JSON.parse(cachedUser);
+                    parsed.user.personalized = true;
+                    await AsyncStorage.setItem("cachedUser", JSON.stringify(parsed));
+                }
+                setIsSaving(false);
+                return true;
+            } else {
+                alert(data.message || "Failed to save personalization");
+                setIsSaving(false);
+                return false;
+            }
+        } catch (err) {
+            console.error("Error saving personalization:", err);
+            alert("Error saving your preferences");
+            setIsSaving(false);
+            return false;
+        }
+    };
+
+    const handleContinue = async () => {
         if (step < 5) {
             setStep(step + 1);
         } else {
-            navigation.navigate("MainTabs", { screen: "Chat" });
+            // Save personalization data to backend
+            const success = await savePersonalization();
+            if (success) {
+                navigation.navigate("MainTabs");
+            }
         }
     };
 
     const handleSkipAll = () => {
-        navigation.navigate("MainTabs", { screen: "Chat" });
+        navigation.navigate("MainTabs");
     };
 
     const isContinueDisabled = () => {
@@ -401,11 +457,11 @@ const Questionnaire = () => {
                 {/* Continue + Bottom Skip */}
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity
-                        style={[styles.button, isContinueDisabled() && styles.buttonDisabled]}
+                        style={[styles.button, (isContinueDisabled() || isSaving) && styles.buttonDisabled]}
                         onPress={handleContinue}
-                        disabled={isContinueDisabled()}>
-                        <Text style={styles.buttonText}>{step === 5 ? "Get Started" : "Continue"}</Text>
-                        <Ionicons name="arrow-forward" size={20} color={colors.buttonText} style={styles.buttonIcon} />
+                        disabled={isContinueDisabled() || isSaving}>
+                        <Text style={styles.buttonText}>{isSaving ? "Saving..." : step === 5 ? "Get Started" : "Continue"}</Text>
+                        {!isSaving && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={styles.buttonIcon} />}
                     </TouchableOpacity>
 
                     {step < 5 && (

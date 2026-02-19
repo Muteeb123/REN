@@ -1,26 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     View,
     StyleSheet,
     Dimensions,
-    KeyboardAvoidingView,
-    Platform,
     SafeAreaView,
-    Text,
     StatusBar,
     useWindowDimensions,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-    LibraryBig,
-    SparklesIcon,
-    BotMessageSquare,
-    HeartHandshake,
-    Settings,
-} from "lucide-react-native";
 
 import Login from "../screens/Login";
 import Personalization from "../screens/Personalization";
@@ -28,9 +17,10 @@ import ChatPage from "../screens/Chat";
 import Journal from "../screens/Journal";
 import Meditation from "../screens/Meditation";
 import MeditationSession from "../screens/MeditationSession";
+import SettingsScreen from "../screens/Settings";
+import NavigationBar from "../components/NavigationBar";
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -52,15 +42,6 @@ const moderateScale = (size, factor = 0.5) => {
     return size + (scale(size) - size) * factor;
 };
 
-const responsiveFontSize = (size) => {
-    const baseWidth = 375;
-    const scaleFactor = SCREEN_WIDTH / baseWidth;
-    const normalizedSize = size * scaleFactor;
-    const maxSize = size * 1.3;
-    const minSize = size * 0.8;
-    return Math.min(Math.max(normalizedSize, minSize), maxSize);
-};
-
 const colors = {
     primary: "#FFFFFF",
     secondary: "#52ACD7",
@@ -71,133 +52,48 @@ const colors = {
     focused: "#fff3b0",
 };
 
-// SafeScreenWrapper: keeps screens responsive and keyboard safe
-const SafeScreenWrapper = ({ children }) => {
-    const { height } = useWindowDimensions();
-
-    return (
-        <KeyboardAvoidingView
-            style={styles.flex}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? verticalScale(60) : 0}
-        >
-            <View style={[styles.screenContainer, { minHeight: height }]}>{children}</View>
-        </KeyboardAvoidingView>
-    );
-};
-
-// Placeholder for unused tabs
-const PlaceholderScreen = ({ title }) => {
-    const { height } = useWindowDimensions();
-    const isSmallScreen = height < 600;
-
-    return (
-        <SafeScreenWrapper>
-            <View style={[styles.center, { paddingHorizontal: moderateScale(20) }]}>
-                <Text
-                    style={[
-                        styles.placeholderText,
-                        { fontSize: isSmallScreen ? responsiveFontSize(16) : responsiveFontSize(18) },
-                    ]}
-                >
-                    {title} Page
-                </Text>
-            </View>
-        </SafeScreenWrapper>
-    );
-};
-
-const JournalWithSafeArea = () => (
-    <SafeScreenWrapper>
-        <Journal />
-    </SafeScreenWrapper>
-);
-
-const ChatWithSafeArea = () => (
-    <SafeScreenWrapper>
-        <ChatPage />
-    </SafeScreenWrapper>
-);
-
-const MeditationWithSafeArea = () => (
-    <SafeScreenWrapper>
-        <Meditation />
-    </SafeScreenWrapper>
-);
-
-function MainTabs() {
+// MainTabsLayout: Persistent Navigation with Dynamic Screen Content
+function MainTabsLayout({ route, navigation }) {
     const insets = useSafeAreaInsets();
-    const { width, height } = useWindowDimensions();
+    const { height, width } = useWindowDimensions();
     const isSmallScreen = height < 600;
     const isLargeScreen = width > 400;
+    const [currentScreen, setCurrentScreen] = useState(route.params?.screen || "Chat");
 
-    const getTabBarHeight = () => {
-        if (isSmallScreen) {
-            return verticalScale(50) + insets.bottom;
-        } else if (isLargeScreen) {
-            return verticalScale(70) + insets.bottom;
-        }
-        return verticalScale(60) + insets.bottom;
+    const screensMap = {
+        Chat: ChatPage,
+        Journal: Journal,
+        Meditation: Meditation,
+        Settings: SettingsScreen,
     };
 
-    const getIconSize = () => {
-        if (isSmallScreen) {
-            return scale(24);
-        } else if (isLargeScreen) {
-            return scale(32);
-        }
-        return scale(28);
+    const CurrentScreenComponent = screensMap[currentScreen] || ChatPage;
+
+    const handleNavigateToScreen = (screenName) => {
+        setCurrentScreen(screenName);
     };
 
     return (
-        <>
-            <StatusBar
-                barStyle="light-content"
-                backgroundColor={colors.primary}
-                translucent
-            />
-            <Tab.Navigator
-                screenOptions={({ route }) => ({
-                    headerShown: false,
-                    tabBarShowLabel: false,
-                    tabBarHideOnKeyboard: true,
-                    tabBarStyle: {
-                        backgroundColor: colors.primary,
-                        paddingTop: verticalScale(8),
-                        borderTopColor: "rgba(82, 172, 215, 0.1)",
-                        height: getTabBarHeight(),
-                    },
-                    tabBarIcon: ({ focused }) => {
-                        const iconColor = focused ? colors.secondary : colors.textLight;
-                        const iconSize = getIconSize();
+        <View style={styles.mainTabsContainer}>
+            <View style={styles.screenContent}>
+                <CurrentScreenComponent
+                    currentScreen={currentScreen}
+                    onNavigate={handleNavigateToScreen}
+                />
+            </View>
 
-                        switch (route.name) {
-                            case "Chat":
-                                return <BotMessageSquare color={iconColor} size={iconSize} strokeWidth={2.3} />;
-                            case "Journal":
-                                return <LibraryBig color={iconColor} size={iconSize} strokeWidth={2.3} />;
-                            case "Meditation":
-                                return <SparklesIcon color={iconColor} size={iconSize} strokeWidth={2.3} />;
-                            case "Account":
-                                return <HeartHandshake color={iconColor} size={iconSize} strokeWidth={2.3} />;
-                            case "Settings":
-                                return <Settings color={iconColor} size={iconSize} strokeWidth={2.3} />;
-                            default:
-                                return null;
-                        }
-                    },
-                    tabBarActiveTintColor: colors.secondary,
-                    tabBarInactiveTintColor: colors.textLight,
-                })}
-                initialRouteName="Chat"
-            >
-                <Tab.Screen name="Journal" component={JournalWithSafeArea} />
-                <Tab.Screen name="Meditation" component={MeditationWithSafeArea} />
-                <Tab.Screen name="Chat" component={ChatWithSafeArea} />
-                <Tab.Screen name="Account" component={ChatWithSafeArea} />
-                <Tab.Screen name="Settings" component={ChatWithSafeArea} />
-            </Tab.Navigator>
-        </>
+            {/* Persistent Navigation Bar (rendered once) */}
+            <NavigationBar
+                currentScreen={currentScreen}
+                onNavigate={handleNavigateToScreen}
+                backgroundColor="#FFFFFF"
+                activeColor="#52ACD7"
+                inactiveColor="#6E6E6E"
+                isSmallScreen={isSmallScreen}
+                isLargeScreen={isLargeScreen}
+                bottomInset={insets.bottom}
+            />
+        </View>
     );
 }
 
@@ -221,7 +117,7 @@ export default function AppNavigator() {
                     >
                         <Stack.Screen name="Login" component={Login} />
                         <Stack.Screen name="Personalization" component={Personalization} />
-                        <Stack.Screen name="MainTabs" component={MainTabs} />
+                        <Stack.Screen name="MainTabs" component={MainTabsLayout} initialParams={{ screen: "Chat" }} />
                         <Stack.Screen name="MeditationSession" component={MeditationSession} />
                     </Stack.Navigator>
                 </SafeAreaView>
@@ -235,20 +131,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
-    flex: {
-        flex: 1,
-    },
-    screenContainer: {
+    mainTabsContainer: {
         flex: 1,
         backgroundColor: colors.background,
     },
-    center: {
+    screenContent: {
         flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    placeholderText: {
-        fontWeight: "600",
-        color: colors.textDark,
     },
 });
