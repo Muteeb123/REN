@@ -103,6 +103,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: scale(16),
         paddingVertical: scale(12),
         minHeight: scale(56),
+
     },
     iconContainer: {
         width: scale(40),

@@ -74,7 +74,7 @@ const LoginScreen = () => {
             });
 
             const tokenData = await res.json();
-            console.log("Token Response:", tokenData);
+
 
             if (res.ok && tokenData.access_token) {
                 await fetchRedditProfileAndSend(tokenData);
@@ -82,8 +82,7 @@ const LoginScreen = () => {
                 alert(tokenData.error_description || "Failed to get Reddit token.");
             }
         } catch (err) {
-            console.error("❌ Token exchange error:", err);
-            alert("Network error during token exchange.");
+
         } finally {
             setIsLoading(false);
         }
@@ -91,7 +90,7 @@ const LoginScreen = () => {
 
     // Fetch Reddit profile → send to backend
     const fetchRedditProfileAndSend = async (tokenData) => {
-        console.log("Fetching Reddit profile with access token.");
+
         try {
             const profileRes = await fetch(REDDIT_API_ME, {
                 headers: {
@@ -101,7 +100,6 @@ const LoginScreen = () => {
             });
 
             const profile = await profileRes.json();
-            console.log("Reddit Profile:", profile);
 
             if (!profile?.name) {
                 alert("Failed to fetch Reddit profile username.");
@@ -116,7 +114,6 @@ const LoginScreen = () => {
                 age: null,
             };
 
-            console.log("Sending payload to backend:", payload);
 
             const backendRes = await fetch(BACKEND_SIGNUP_URL, {
                 method: "POST",
@@ -125,8 +122,6 @@ const LoginScreen = () => {
             });
 
             const backendData = await backendRes.json();
-            console.log("Backend Response:", backendData);
-
             if (backendRes.ok) {
                 // Save user ID globally
                 await AsyncStorage.setItem("userId", backendData.user._id);
@@ -150,7 +145,6 @@ const LoginScreen = () => {
                 alert(backendData.message || "Backend authentication failed.");
             }
         } catch (err) {
-            console.error("❌ Error sending data to backend:", err);
             alert("Error sending data to backend.");
         }
     };
@@ -167,7 +161,6 @@ const LoginScreen = () => {
 
                     // Check if cache is still valid (within 1 month)
                     if (now - timestamp < oneMonth) {
-                        console.log("Using cached user data");
                         await AsyncStorage.setItem("userId", user._id);
 
                         // Navigate based on personalization status
@@ -183,7 +176,6 @@ const LoginScreen = () => {
                     }
                 }
             } catch (err) {
-                console.error("Error checking cached user:", err);
             }
         };
 
@@ -194,12 +186,10 @@ const LoginScreen = () => {
     useEffect(() => {
         if (response?.type === "success") {
             const { code } = response.params;
-            console.log("Authorization code received:", code);
             exchangeCodeForToken(code);
         } else if (response?.type === "dismiss") {
             setIsLoading(false);
         } else if (response?.type === "error") {
-            console.error("Auth error:", response.params);
             setIsLoading(false);
         }
     }, [response]);
@@ -210,7 +200,6 @@ const LoginScreen = () => {
         try {
             await promptAsync();
         } catch (err) {
-            console.error("❌ Authentication error:", err);
             setIsLoading(false);
         }
     };

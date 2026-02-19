@@ -180,9 +180,9 @@ export default function Journal({ currentScreen, onNavigate }) {
                     body: JSON.stringify(payload),
                 });
                 const json = await response.json();
-                console.log("Update response:", json);
+
             } catch (error) {
-                console.error("Error updating journal entry:", error);
+
             }
 
             const updated = entries.map((item) =>

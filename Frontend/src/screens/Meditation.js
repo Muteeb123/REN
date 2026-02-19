@@ -221,7 +221,7 @@ export default function Meditation({ currentScreen, onNavigate }) {
                 showLeftIcon={false}
                 showRightIcon={true}
                 rightIconName="search-outline"
-                onRightIconPress={() => console.log("Search")}
+
                 backgroundColor="#FFFFFF"
                 borderBottomColor="rgba(82, 172, 215, 0.1)"
                 rightIconSize={32}

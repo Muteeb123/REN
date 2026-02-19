@@ -9,11 +9,14 @@ import {
     Dimensions,
     KeyboardAvoidingView,
     Platform,
+    Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../components/Header";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pencil } from "lucide-react-native";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -36,12 +39,18 @@ const colors = {
 export default function Settings() {
     const navigation = useNavigation();
     const nameInputRef = useRef(null);
+    const redditnameInputRef = useRef(null);
     const emailInputRef = useRef(null);
-
+    const insets = useSafeAreaInsets();
     const [name, setName] = useState("");
     const [helpEmail, setHelpEmail] = useState("");
     const [isEditingName, setIsEditingName] = useState(false);
     const [isEditingEmail, setIsEditingEmail] = useState(false);
+    const [RedditUsername, setRedditUsername] = useState("");
+    const [isEditingRedditUsername, setIsEditingRedditUsername] = useState(false);
+    const [prevName, setPrevName] = useState("");
+    const [prevEmail, setPrevEmail] = useState("");
+    const [prevRedditUsername, setPrevRedditUsername] = useState("");
 
     useEffect(() => {
         const loadProfile = async () => {
@@ -49,11 +58,15 @@ export default function Settings() {
                 const cachedUser = await AsyncStorage.getItem("cachedUser");
                 if (cachedUser) {
                     const parsed = JSON.parse(cachedUser);
+                    if (parsed?.user?.preferredName) {
+                        setName(parsed.user.preferredName);
+                    }
                     if (parsed?.user?.name) {
-                        setName(parsed.user.name);
+                        setRedditUsername(parsed.user.name);
                     }
                 }
                 const storedHelpEmail = await AsyncStorage.getItem("helpContactEmail");
+
                 if (storedHelpEmail) {
                     setHelpEmail(storedHelpEmail);
                 }
@@ -85,48 +98,135 @@ export default function Settings() {
 
     const toggleNameEditing = async () => {
         if (isEditingName) {
+            // Saving - validate before saving
+            const trimmedName = name.trim();
+            if (!trimmedName) {
+                Alert.alert(
+                    "Validation Error",
+                    "Name field cannot be empty. Please enter a valid name.",
+                    [{ text: "OK" }]
+                );
+                setName(prevName); // Revert to previous value
+                setIsEditingName(false);
+                return;
+            }
             setIsEditingName(false);
-            await saveCachedUserName(name.trim());
+            await saveCachedUserName(trimmedName);
             return;
         }
+        // Entering edit mode - save current value
+        setPrevName(name);
         setIsEditingName(true);
         setTimeout(() => nameInputRef.current?.focus(), 50);
     };
 
     const toggleEmailEditing = async () => {
         if (isEditingEmail) {
+            // Saving - validate before saving
+            const trimmedEmail = helpEmail.trim();
+            if (!trimmedEmail) {
+                Alert.alert(
+                    "Validation Error",
+                    "Help contact email field cannot be empty. Please enter an email.",
+                    [{ text: "OK" }]
+                );
+                setHelpEmail(prevEmail); // Revert to previous value
+                setIsEditingEmail(false);
+                return;
+            }
+            if (!isValidEmail(trimmedEmail)) {
+                Alert.alert(
+                    "Invalid Email",
+                    "Please enter a valid email address (e.g., user@example.com).",
+                    [{ text: "OK" }]
+                );
+                setHelpEmail(prevEmail); // Revert to previous value
+                setIsEditingEmail(false);
+                return;
+            }
             setIsEditingEmail(false);
-            await AsyncStorage.setItem("helpContactEmail", helpEmail.trim());
+            await AsyncStorage.setItem("helpContactEmail", trimmedEmail);
             return;
         }
+        // Entering edit mode - save current value
+        setPrevEmail(helpEmail);
         setIsEditingEmail(true);
         setTimeout(() => emailInputRef.current?.focus(), 50);
     };
 
-    const handleLogout = async () => {
-        try {
-            await AsyncStorage.removeItem("cachedUser");
-            await AsyncStorage.removeItem("userId");
-            await AsyncStorage.removeItem("helpContactEmail");
-        } catch (error) {
-            console.error("Logout error:", error);
-        } finally {
-            navigation.replace("Login");
+    const toggleRedditUsernameEditing = async () => {
+        if (isEditingRedditUsername) {
+            // Saving - validate before saving
+            const trimmedUsername = RedditUsername.trim();
+            if (!trimmedUsername) {
+                Alert.alert(
+                    "Validation Error",
+                    "Reddit username field cannot be empty. Please enter a valid username.",
+                    [{ text: "OK" }]
+                );
+                setRedditUsername(prevRedditUsername); // Revert to previous value
+                setIsEditingRedditUsername(false);
+                return;
+            }
+            setIsEditingRedditUsername(false);
+            await saveCachedUserName(trimmedUsername);
+            return;
         }
+        // Entering edit mode - save current value
+        setPrevRedditUsername(RedditUsername);
+        setIsEditingRedditUsername(true);
+        setTimeout(() => redditnameInputRef.current?.focus(), 50);
+    };
+
+    // Email validation function
+    const isValidEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
+    const handleLogout = async () => {
+        // Show confirmation dialog
+        Alert.alert(
+            "Confirm Logout",
+            "Are you sure you want to log out?",
+            [
+                {
+                    text: "Cancel",
+
+                    style: "cancel",
+                },
+                {
+                    text: "Log Out",
+                    onPress: async () => {
+                        try {
+                            await AsyncStorage.removeItem("cachedUser");
+                            await AsyncStorage.removeItem("userId");
+                            await AsyncStorage.removeItem("helpContactEmail");
+                        } catch (error) {
+
+                            Alert.alert("Error", "Failed to logout. Please try again.");
+                        } finally {
+                            navigation.replace("Login");
+                        }
+                    },
+                    style: "destructive",
+                },
+            ]
+        );
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
 
             <Header
-                title="Chat with REN"
+                title="User Settings"
                 titleAlignment="center"
 
                 subtitleColor="#52ACD7"
                 showLeftIcon={false}
                 leftIconName="arrow-back"
                 onLeftIconPress={() => { }}
-                showRightIcon={true}
+
                 rightIconName="settings-outline"
                 onRightIconPress={() => { }}
                 backgroundColor="#FFFFFF"
@@ -134,13 +234,29 @@ export default function Settings() {
                 rightIconSize={30}
                 textSize={22}
             />
+
             <KeyboardAvoidingView
-                style={styles.container}
+                style={[styles.container, { paddingTop: insets.top }]}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
                 <View style={styles.content}>
                     <Text style={styles.title}>Settings</Text>
 
+                    <View style={styles.section}>
+                        <Text style={styles.label}>Reddit Username</Text>
+                        <View style={styles.inputRow}>
+                            <TextInput
+                                ref={redditnameInputRef}
+                                value={RedditUsername}
+                                onChangeText={setRedditUsername}
+                                editable={isEditingRedditUsername}
+                                placeholder="Your Reddit username"
+                                placeholderTextColor={colors.textLight}
+                                style={[styles.input, !isEditingRedditUsername && styles.inputDisabled]}
+                            />
+
+                        </View>
+                    </View>
                     <View style={styles.section}>
                         <Text style={styles.label}>Name</Text>
                         <View style={styles.inputRow}>
@@ -159,7 +275,7 @@ export default function Settings() {
                                 accessibilityLabel={isEditingName ? "Save name" : "Edit name"}
                             >
                                 <Ionicons
-                                    name={isEditingName ? "checkmark" : "create-outline"}
+                                    name={isEditingName ? "checkmark" : "pencil-outline"}
                                     size={scale(20)}
                                     color={colors.primary}
                                 />
@@ -187,7 +303,7 @@ export default function Settings() {
                                 accessibilityLabel={isEditingEmail ? "Save help contact" : "Edit help contact"}
                             >
                                 <Ionicons
-                                    name={isEditingEmail ? "checkmark" : "create-outline"}
+                                    name={isEditingEmail ? "checkmark" : "pencil-outline"}
                                     size={scale(20)}
                                     color={colors.primary}
                                 />
@@ -208,11 +324,12 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: colors.background,
+
     },
     container: {
         flex: 1,
         paddingHorizontal: moderateScale(20),
-        paddingTop: 0,
+
         paddingBottom: verticalScale(10),
         justifyContent: "space-between",
     },

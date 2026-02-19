@@ -125,7 +125,6 @@ const Questionnaire = () => {
             });
 
             const data = await response.json();
-            console.log("Personalization Response:", data);
 
             if (response.ok) {
                 // Update cached user with personalized = true

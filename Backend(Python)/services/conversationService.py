@@ -218,8 +218,6 @@ async def closeActiveConversation(user_id: str):
         }
     )
     
-    print("result of closeActiveConversation:", result)
-
     if result.modified_count == 0:
         return {
             "success": True,
