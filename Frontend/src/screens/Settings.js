@@ -16,7 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../components/Header";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pencil } from "lucide-react-native";
+import { Edit, Icon, Pencil } from "lucide-react-native";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -244,15 +244,15 @@ export default function Settings() {
 
                     <View style={styles.section}>
                         <Text style={styles.label}>Reddit Username</Text>
-                        <View style={styles.inputRow}>
+                        <View style={[styles.inputRow, styles.inputRowDisabled]}>
                             <TextInput
                                 ref={redditnameInputRef}
                                 value={RedditUsername}
                                 onChangeText={setRedditUsername}
-                                editable={isEditingRedditUsername}
+                                editable={false}
                                 placeholder="Your Reddit username"
                                 placeholderTextColor={colors.textLight}
-                                style={[styles.input, !isEditingRedditUsername && styles.inputDisabled]}
+                                style={[styles.input, styles.inputDisabled]}
                             />
 
                         </View>
@@ -274,11 +274,14 @@ export default function Settings() {
                                 style={styles.iconButton}
                                 accessibilityLabel={isEditingName ? "Save name" : "Edit name"}
                             >
-                                <Ionicons
-                                    name={isEditingName ? "checkmark" : "pencil-outline"}
-                                    size={scale(20)}
-                                    color={colors.primary}
-                                />
+                                {isEditingName ? (
+                                    <Ionicons
+                                        name="checkmark"
+                                        size={scale(20)}
+                                        color={colors.primary}
+                                    />
+                                ) : <Pencil size={scale(20)} color={colors.primary} />}
+
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -302,11 +305,14 @@ export default function Settings() {
                                 style={styles.iconButton}
                                 accessibilityLabel={isEditingEmail ? "Save help contact" : "Edit help contact"}
                             >
-                                <Ionicons
-                                    name={isEditingEmail ? "checkmark" : "pencil-outline"}
-                                    size={scale(20)}
-                                    color={colors.primary}
-                                />
+                                {isEditingEmail ? (
+                                    <Ionicons
+                                        name="checkmark"
+                                        size={scale(20)}
+                                        color={colors.primary}
+                                    />
+                                ) : <Pencil size={scale(20)} color={colors.primary} />}
+
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -369,6 +375,9 @@ const styles = StyleSheet.create({
     },
     inputDisabled: {
         color: colors.textLight,
+    },
+    inputRowDisabled: {
+        backgroundColor: "#F0F0F0",
     },
     iconButton: {
         padding: moderateScale(6),
