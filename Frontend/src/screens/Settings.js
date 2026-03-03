@@ -16,11 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../components/Header";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-<<<<<<< HEAD
 import { Edit, Icon, Pencil } from "lucide-react-native";
-=======
-import { Pencil } from "lucide-react-native";
->>>>>>> ad39869be0e72b69c1eef0a1d41e4137242f496e
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
