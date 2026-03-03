@@ -16,7 +16,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../components/Header";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+<<<<<<< HEAD
 import { Edit, Icon, Pencil } from "lucide-react-native";
+=======
+import { Pencil } from "lucide-react-native";
+>>>>>>> ad39869be0e72b69c1eef0a1d41e4137242f496e
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -274,17 +278,19 @@ export default function Settings() {
                                 style={styles.iconButton}
                                 accessibilityLabel={isEditingName ? "Save name" : "Edit name"}
                             >
-                                {isEditingName ? (
-                                    <Ionicons
-                                        name="checkmark"
-                                        size={scale(20)}
-                                        color={colors.primary}
-                                    />
-                                ) : <Pencil size={scale(20)} color={colors.primary} />}
+                                {
+                                    isEditingName ? (
+                                        <Ionicons
+                                            name="checkmark"
+                                            size={scale(20)}
+                                            color={colors.primary}
+                                        />
+                                    ) : <Pencil size={scale(20)} color={colors.primary} />
+                                }
 
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                            </TouchableOpacity >
+                        </View >
+                    </View >
 
                     <View style={styles.section}>
                         <Text style={styles.label}>Help Contact Email</Text>
@@ -305,24 +311,26 @@ export default function Settings() {
                                 style={styles.iconButton}
                                 accessibilityLabel={isEditingEmail ? "Save help contact" : "Edit help contact"}
                             >
-                                {isEditingEmail ? (
-                                    <Ionicons
-                                        name="checkmark"
-                                        size={scale(20)}
-                                        color={colors.primary}
-                                    />
-                                ) : <Pencil size={scale(20)} color={colors.primary} />}
+                                {
+                                    isEditingEmail ? (
+                                        <Ionicons
+                                            name="checkmark"
+                                            size={scale(20)}
+                                            color={colors.primary}
+                                        />
+                                    ) : <Pencil size={scale(20)} color={colors.primary} />
+                                }
 
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                            </TouchableOpacity >
+                        </View >
+                    </View >
+                </View >
 
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Text style={styles.logoutButtonText}>Log Out</Text>
                 </TouchableOpacity>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+            </KeyboardAvoidingView >
+        </SafeAreaView >
     );
 }
 
