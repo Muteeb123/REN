@@ -172,13 +172,12 @@ export default function ChatPage({ currentScreen, onNavigate }) {
                 showLeftIcon={false}
                 leftIconName="arrow-back"
                 onLeftIconPress={() => { }}
-                showRightIcon={true}
-                rightIconName="settings-outline"
-                onRightIconPress={() => { }}
+
+
                 backgroundColor="#FFFFFF"
                 borderBottomColor="rgba(82, 172, 215, 0.1)"
-                rightIconSize={30}
-                textSize={22}
+
+                textSize={21}
             />
 
             {/* Chat Area */}

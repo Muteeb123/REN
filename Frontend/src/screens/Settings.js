@@ -460,6 +460,6 @@ const styles = StyleSheet.create({
     logoutButtonText: {
         color: colors.dangerText,
         fontSize: scale(14),
-        fontWeight: "700",
+        fontWeight: "600",
     },
 });

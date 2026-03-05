@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { Pause, Play } from "lucide-react-native";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -227,8 +228,8 @@ export default function MeditationSession() {
     };
 
     const resetSession = () => {
-        setIsPaused(false);
-        setIsBreathing(true);
+        setIsPaused(true);
+        setIsBreathing(false);
         const durationInSeconds = selectedDuration * 60;
         setTimeLeft(durationInSeconds);
         scaleAnim.stopAnimation();
@@ -296,16 +297,19 @@ export default function MeditationSession() {
                         />
 
                         {/* Inner circle with timer */}
-                        {sessionActive ? (<Animated.View
+                        {sessionActive ? (<TouchableOpacity
                             style={[
                                 styles.breathingCircleInner,
                                 {
                                     transform: [{ scale: pulseAnim }],
                                 }
                             ]}
+                            onPress={isPaused ? resumeSession : pauseSession}
                         >
 
-                            <View style={styles.timerContainer}>
+                            <View style={styles.timerContainer}
+
+                            >
                                 <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
                                 <Text style={styles.timerLabel}>
                                     {isPaused ? "PAUSED" : "REMAINING"}
@@ -314,7 +318,7 @@ export default function MeditationSession() {
 
 
 
-                        </Animated.View>) : (
+                        </TouchableOpacity>) : (
                             <TouchableOpacity
                                 style={styles.breathingCircleInner}
                                 onPress={startSession}
@@ -401,12 +405,15 @@ export default function MeditationSession() {
                                 style={[styles.controlButton, styles.pauseButton]}
                                 onPress={isPaused ? resumeSession : pauseSession}
                             >
-                                <Ionicons
-                                    name={isPaused ? "play" : "pause"}
-                                    size={moderateScale(40)}
-                                    color={colors.primary}
-                                    style={{ paddingLeft: isPaused ? moderateScale(4) : 0 }}
-                                />
+                                {isPaused ? (
+                                    <Play
+
+                                        size={moderateScale(40)}
+                                        color={colors.secondary}
+                                        fill={colors.primary}
+                                        style={{ paddingLeft: isPaused ? moderateScale(4) : 0 }}
+                                    />
+                                ) : <Pause size={moderateScale(40)} color={colors.secondary} fill={colors.primary} />}
                             </TouchableOpacity>
 
                             {/* Stop Button */}
@@ -441,7 +448,7 @@ const styles = StyleSheet.create({
     },
     sessionTitle: {
         fontSize: moderateScale(24),
-        fontWeight: "700",
+
         color: colors.textDark,
         textAlign: "center",
         marginBottom: verticalScale(8),
@@ -647,7 +654,7 @@ const styles = StyleSheet.create({
     startButtonText: {
         color: colors.primary,
         fontSize: moderateScale(16),
-        fontWeight: "700",
+        fontWeight: "400",
         marginRight: moderateScale(8),
     },
     startButtonIcon: {
