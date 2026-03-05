@@ -17,6 +17,7 @@ SYSTEM_PROMPT = SYSTEM_PROMPT = "You are REN (Reflective Emotion Navigator), an 
 async def generateResponse(user_id: str, user_message: str):
     
     
+    
     # Fetch active conversation from db
     conv = await db.conversations.find_one({
         "user_id": user_id,
@@ -108,33 +109,65 @@ async def generateResponse(user_id: str, user_message: str):
         "role": "user",
         "parts": [{"text": user_message}]
     })
-
+    
     # Send all messages in ONE API call
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=messages_for_gemini
-    )
-   
-    assistant_reply = response.text
-    
-    # Store assistant's reply in conversation
-    conv["messages"].append({
-        "role": "model",
-        "content": assistant_reply,
-        "updated_at": datetime.now(),
-        "created_at": datetime.now()
-    })
-    
-    # Update timestamp
-    conv["updated_at"] = datetime.now()
-    
-    # Update conversation in database
-    await db.conversations.update_one(
-        {"user_id": user_id, "active": True},
-        {"$set": conv},
-        upsert=True
-    )
-   
-    return {
-        "reply": assistant_reply
-    }
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=messages_for_gemini
+        )
+        
+        print("Gemini response:2 ")
+        assistant_reply = response.text
+        
+        # Store assistant's reply in conversation
+        conv["messages"].append({
+            "role": "model",
+            "content": assistant_reply,
+            "updated_at": datetime.now(),
+            "created_at": datetime.now()
+        })
+        
+        # Update timestamp
+        conv["updated_at"] = datetime.now()
+        
+        # Update conversation in database
+        await db.conversations.update_one(
+            {"user_id": user_id, "active": True},
+            {"$set": conv},
+            upsert=True
+        )
+       
+        return {
+            "reply": assistant_reply
+        }
+    except Exception as e:
+        print(f"Error generating response from Gemini: {str(e)}")
+        # Return error message to user
+        error_reply = "I apologize, but I encountered an error while processing your message. Please try again."
+        
+        # Store error message in conversation
+        conv["messages"].append({
+            "role": "model",
+            "content": error_reply,
+            "updated_at": datetime.now(),
+            "created_at": datetime.now()
+        })
+        
+        # Update timestamp
+        conv["updated_at"] = datetime.now()
+        
+        # Update conversation in database
+        try:
+            await db.conversations.update_one(
+                {"user_id": user_id, "active": True},
+                {"$set": conv},
+                upsert=True
+            )
+        except Exception as db_error:
+            print(f"Error updating conversation in database: {str(db_error)}")
+        
+        return {
+            "reply": error_reply,
+            "error": str(e)
+        }

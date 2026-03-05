@@ -4,7 +4,7 @@ import User from "../Models/User.model.js";
 // --- PERSONALIZE: Update user with personalization data ---
 export const personalize = async (req, res) => {
     try {
-        const { userId, name, gender, age, goals, causes } = req.body;
+        const { userId, name, gender, age, goals, causes, helpContactEmail } = req.body;
 
         if (!userId) {
             return res.status(400).json({ message: "User ID is required" });
@@ -19,6 +19,7 @@ export const personalize = async (req, res) => {
                 age: age || undefined,
                 goals: goals || undefined,
                 causes: causes || undefined,
+                helpContactEmail: helpContactEmail || undefined,
                 personalized: true,
             },
             { new: true, runValidators: true }

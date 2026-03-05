@@ -291,7 +291,7 @@ export default function Journal({ currentScreen, onNavigate }) {
 
     if (view === "list") {
         return (
-            <SafeAreaView style={styles.safeContainer}>
+            <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top }]}>
                 <Header
                     title="Journals"
                     titleAlignment="center"
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     safeContainer: {
         flex: 1,
         backgroundColor: "#F5F9F3",
-        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+
     },
 
     header: {

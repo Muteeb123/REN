@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     Alert,
+    ToastAndroid,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import Header from "../components/Header";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Edit, Icon, Pencil } from "lucide-react-native";
+import { NODE_BACKEND_URL } from "../config/urls";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -64,10 +66,13 @@ export default function Settings() {
                     if (parsed?.user?.name) {
                         setRedditUsername(parsed.user.name);
                     }
+                    if (parsed?.user?.helpContactEmail) {
+                        setHelpEmail(parsed.user.helpContactEmail);
+                    }
                 }
+                // Fallback to AsyncStorage for backward compatibility
                 const storedHelpEmail = await AsyncStorage.getItem("helpContactEmail");
-
-                if (storedHelpEmail) {
+                if (storedHelpEmail && !helpEmail) {
                     setHelpEmail(storedHelpEmail);
                 }
             } catch (error) {
@@ -87,7 +92,7 @@ export default function Settings() {
                 ...parsed,
                 user: {
                     ...parsed.user,
-                    name: nextName,
+                    preferredName: nextName,
                 },
             };
             await AsyncStorage.setItem("cachedUser", JSON.stringify(updated));
@@ -95,7 +100,50 @@ export default function Settings() {
             console.error("Settings save name error:", error);
         }
     };
+    const updateUserProfile = async (updates) => {
+        try {
+            const userId = await AsyncStorage.getItem("userId");
+            if (!userId) {
+                throw new Error("User ID not found");
+            }
 
+            const response = await fetch(`${NODE_BACKEND_URL}/api/user/personalize`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userId,
+                    ...updates,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to update profile");
+            }
+
+            const data = await response.json();
+
+            // Update cached user with new data
+            const cachedUser = await AsyncStorage.getItem("cachedUser");
+            if (cachedUser) {
+                const parsed = JSON.parse(cachedUser);
+                const updated = {
+                    ...parsed,
+                    user: {
+                        ...parsed.user,
+                        ...data.user,
+                    },
+                };
+                await AsyncStorage.setItem("cachedUser", JSON.stringify(updated));
+            }
+
+            return data;
+        } catch (error) {
+            console.error("Update profile error:", error);
+            throw error;
+        }
+    };
     const toggleNameEditing = async () => {
         if (isEditingName) {
             // Saving - validate before saving
@@ -111,7 +159,14 @@ export default function Settings() {
                 return;
             }
             setIsEditingName(false);
-            await saveCachedUserName(trimmedName);
+
+            try {
+                await updateUserProfile({ name: trimmedName });
+                ToastAndroid.show("Name updated successfully", ToastAndroid.SHORT);
+            } catch (error) {
+                ToastAndroid.show("Failed to update name. Please try again.", ToastAndroid.SHORT);
+                setName(prevName); // Revert on error
+            }
             return;
         }
         // Entering edit mode - save current value
@@ -145,7 +200,16 @@ export default function Settings() {
                 return;
             }
             setIsEditingEmail(false);
-            await AsyncStorage.setItem("helpContactEmail", trimmedEmail);
+
+            try {
+                await updateUserProfile({ helpContactEmail: trimmedEmail });
+                // Also save to AsyncStorage for backward compatibility
+                await AsyncStorage.setItem("helpContactEmail", trimmedEmail);
+                ToastAndroid.show("Help contact email updated successfully", ToastAndroid.SHORT);
+            } catch (error) {
+                ToastAndroid.show("Failed to update help contact email. Please try again.", ToastAndroid.SHORT);
+                setHelpEmail(prevEmail); // Revert on error
+            }
             return;
         }
         // Entering edit mode - save current value
