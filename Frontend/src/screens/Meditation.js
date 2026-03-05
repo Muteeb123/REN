@@ -135,7 +135,7 @@ export default function Meditation({ currentScreen, onNavigate }) {
     const handleNavigateToSession = (session) => {
         navigation.navigate("MeditationSession", {
             session,
-            durationOptions: [5, 8, 10, 15],
+            durationOptions: [1, 2, 5, 10],
         });
     };
 
@@ -232,12 +232,12 @@ export default function Meditation({ currentScreen, onNavigate }) {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Featured Meditation */}
-                <TouchableOpacity
+                <View
                     style={[
                         styles.featuredCard,
                         { height: featuredCardHeight }
                     ]}
-                    onPress={() => handleNavigateToSession(meditationData.featured)}
+
                 >
                     <View style={styles.featuredContent}>
                         <Text style={styles.featuredTitle}>
@@ -266,7 +266,7 @@ export default function Meditation({ currentScreen, onNavigate }) {
                             />
                         </TouchableOpacity>
                     </View>
-                </TouchableOpacity>
+                </View>
 
                 {/* Category Sections */}
                 <FlatList
