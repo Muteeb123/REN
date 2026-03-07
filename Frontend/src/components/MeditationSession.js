@@ -10,10 +10,13 @@ import {
     Platform,
     BackHandler,
     Alert,
+    ScrollView,
+    ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Pause, Play } from "lucide-react-native";
+import * as Speech from "expo-speech";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -61,11 +64,63 @@ export default function MeditationSession() {
     const [timeLeft, setTimeLeft] = useState(120);
     const [sessionActive, setSessionActive] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+    const [voices, setVoices] = useState([]);
+    const [selectedVoice, setSelectedVoice] = useState(null);
+    const [loadingVoices, setLoadingVoices] = useState(true);
 
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const waveAnim = useRef(new Animated.Value(0)).current;
     const timerRef = useRef(null);
+    const scriptIndexRef = useRef(0);
+    const speechTimeoutRef = useRef(null);
+    const isSpeakingRef = useRef(false);
+
+    // Friendly persona names to assign to unique voices
+    const personaNames = [
+        "Sophia", "James", "Aria", "Ethan", "Luna",
+        "Oliver", "Maya", "Leo", "Zara", "Noah",
+        "Isla", "Kai", "Serene", "Aiden", "Clara",
+    ];
+
+    // Load available voices and deduplicate into unique personas
+    useEffect(() => {
+        const loadVoices = async () => {
+            try {
+                const availableVoices = await Speech.getAvailableVoicesAsync();
+                const filteredVoices = availableVoices.filter(
+                    (v) => v.language && v.language.startsWith("en")
+                );
+
+                // Deduplicate: keep one voice per unique underlying name/engine
+                const seen = new Set();
+                const uniqueVoices = [];
+                for (const v of filteredVoices) {
+                    const key = v.name.replace(/[-_#\d]/g, "").toLowerCase().trim();
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueVoices.push(v);
+                    }
+                }
+
+                // Assign a friendly persona name to each unique voice
+                const personas = uniqueVoices.slice(0, personaNames.length).map((v, i) => ({
+                    ...v,
+                    persona: personaNames[i],
+                }));
+
+                setVoices(personas);
+                if (personas.length > 0) {
+                    setSelectedVoice(personas[0]);
+                }
+            } catch (e) {
+                // Fallback — no voice selection available
+            } finally {
+                setLoadingVoices(false);
+            }
+        };
+        loadVoices();
+    }, []);
 
     // Breathing animation
     useEffect(() => {
@@ -173,6 +228,55 @@ export default function MeditationSession() {
         return () => clearInterval(timerRef.current);
     }, [sessionActive, isPaused, timeLeft]);
 
+    // Script speech effect
+    useEffect(() => {
+        const script = session?.script;
+        if (!script || script.length === 0) return;
+
+        if (sessionActive && !isPaused && !isSpeakingRef.current) {
+            const speakNext = () => {
+                const index = scriptIndexRef.current;
+                if (index >= script.length || !sessionActive) return;
+
+                isSpeakingRef.current = true;
+                Speech.speak(script[index], {
+                    language: selectedVoice?.language || "en-US",
+                    ...(selectedVoice ? { voice: selectedVoice.identifier } : {}),
+                    rate: 0.85,
+                    pitch: 1.0,
+                    onDone: () => {
+                        isSpeakingRef.current = false;
+                        scriptIndexRef.current = index + 1;
+                        if (scriptIndexRef.current < script.length) {
+                            // Pause between lines for breathing space
+                            speechTimeoutRef.current = setTimeout(speakNext, 3000);
+                        }
+                    },
+                    onStopped: () => {
+                        isSpeakingRef.current = false;
+                    },
+                    onError: () => {
+                        isSpeakingRef.current = false;
+                    },
+                });
+            };
+
+            speakNext();
+        }
+
+        return () => {
+            clearTimeout(speechTimeoutRef.current);
+        };
+    }, [sessionActive, isPaused, selectedVoice]);
+
+    // Cleanup speech on unmount
+    useEffect(() => {
+        return () => {
+            Speech.stop();
+            clearTimeout(speechTimeoutRef.current);
+        };
+    }, []);
+
     // Handle hardware back button
     useEffect(() => {
         const backHandler = BackHandler.addEventListener(
@@ -210,6 +314,8 @@ export default function MeditationSession() {
     }, [sessionActive]);
 
     const startSession = () => {
+        scriptIndexRef.current = 0;
+        isSpeakingRef.current = false;
         setSessionActive(true);
         setIsBreathing(true);
         setIsPaused(false);
@@ -218,6 +324,9 @@ export default function MeditationSession() {
     };
 
     const pauseSession = () => {
+        Speech.stop();
+        clearTimeout(speechTimeoutRef.current);
+        isSpeakingRef.current = false;
         setIsPaused(true);
         setIsBreathing(false);
     };
@@ -228,6 +337,10 @@ export default function MeditationSession() {
     };
 
     const resetSession = () => {
+        Speech.stop();
+        clearTimeout(speechTimeoutRef.current);
+        isSpeakingRef.current = false;
+        scriptIndexRef.current = 0;
         setIsPaused(true);
         setIsBreathing(false);
         const durationInSeconds = selectedDuration * 60;
@@ -238,6 +351,10 @@ export default function MeditationSession() {
     };
 
     const handleSessionComplete = () => {
+        Speech.stop();
+        clearTimeout(speechTimeoutRef.current);
+        isSpeakingRef.current = false;
+        scriptIndexRef.current = 0;
         setSessionActive(false);
         setIsBreathing(false);
         setIsPaused(false);
@@ -337,7 +454,7 @@ export default function MeditationSession() {
                     </View>
                 </View>
 
-                {/* Duration Selection - Only show when session is not active */}
+                {/* Duration & Voice Selection - Only show when session is not active */}
                 {!sessionActive && (
                     <View style={styles.durationSection}>
                         <Text style={styles.durationTitle}>Select Duration</Text>
@@ -366,6 +483,51 @@ export default function MeditationSession() {
                                 </TouchableOpacity>
                             ))}
                         </View>
+
+                        {/* Voice Selection */}
+                        <Text style={[styles.durationTitle, { marginTop: verticalScale(20) }]}>Select Voice</Text>
+                        {loadingVoices ? (
+                            <ActivityIndicator size="small" color={colors.secondary} />
+                        ) : voices.length > 0 ? (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.voiceList}
+                            >
+                                {voices.map((voice) => (
+                                    <TouchableOpacity
+                                        key={voice.identifier}
+                                        style={[
+                                            styles.voiceButton,
+                                            selectedVoice?.identifier === voice.identifier && styles.voiceButtonSelected,
+                                        ]}
+                                        onPress={() => {
+                                            setSelectedVoice(voice);
+                                            Speech.stop();
+                                            Speech.speak(`Hi, I'm ${voice.persona}. Let's begin.`, {
+                                                voice: voice.identifier,
+                                                language: voice.language,
+                                                rate: 0.9,
+                                                pitch: 1.0,
+                                            });
+                                        }}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.voiceName,
+                                                selectedVoice?.identifier === voice.identifier && styles.voiceNameSelected,
+                                            ]}
+                                            numberOfLines={1}
+                                        >
+                                            {voice.persona}
+                                        </Text>
+
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        ) : (
+                            <Text style={styles.noVoicesText}>Using default voice</Text>
+                        )}
                     </View>
                 )}
 
@@ -689,6 +851,44 @@ const styles = StyleSheet.create({
         height: moderateScale(70),
         backgroundColor: "#F3F6F4",
         marginLeft: moderateScale(20),
-
+    },
+    voiceList: {
+        paddingHorizontal: moderateScale(4),
+        gap: moderateScale(10),
+    },
+    voiceButton: {
+        backgroundColor: colors.bubbleLight,
+        paddingVertical: verticalScale(10),
+        paddingHorizontal: moderateScale(16),
+        borderRadius: moderateScale(12),
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: "transparent",
+        minWidth: moderateScale(100),
+    },
+    voiceButtonSelected: {
+        backgroundColor: colors.secondary,
+        borderColor: colors.secondary,
+    },
+    voiceName: {
+        fontSize: moderateScale(13),
+        fontWeight: "600",
+        color: colors.textDark,
+    },
+    voiceNameSelected: {
+        color: colors.primary,
+    },
+    voiceLanguage: {
+        fontSize: moderateScale(11),
+        color: colors.textLight,
+        marginTop: verticalScale(2),
+    },
+    voiceLanguageSelected: {
+        color: "rgba(255,255,255,0.7)",
+    },
+    noVoicesText: {
+        fontSize: moderateScale(13),
+        color: colors.textLight,
+        textAlign: "center",
     },
 });

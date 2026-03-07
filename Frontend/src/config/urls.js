@@ -1,5 +1,5 @@
 export const NODE_BACKEND_URL = "https://namely-finer-seasnail.ngrok-free.app";
-export const PYTHON_BACKEND_URL = "https://options-money-bizrate-degrees.trycloudflare.com";
+export const PYTHON_BACKEND_URL = "https://rocky-progressive-samuel-ought.trycloudflare.com";
 
 export const REDDIT_AUTH_ENDPOINT = "https://www.reddit.com/api/v1/authorize";
 export const REDDIT_TOKEN_ENDPOINT = "https://www.reddit.com/api/v1/access_token";
