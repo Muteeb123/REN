@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     StyleSheet,
@@ -6,18 +6,21 @@ import {
     SafeAreaView,
     StatusBar,
     useWindowDimensions,
+    ActivityIndicator,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Login from "../screens/Login";
 import Personalization from "../screens/Personalization";
 import ChatPage from "../screens/Chat";
 import Journal from "../screens/Journal";
 import Meditation from "../screens/Meditation";
-import MeditationSession from "../screens/MeditationSession";
+import MeditationSession from "../components/MeditationSession";
 import SettingsScreen from "../screens/Settings";
+import Support from "../screens/Support";
 import NavigationBar from "../components/NavigationBar";
 
 const Stack = createStackNavigator();
@@ -64,6 +67,7 @@ function MainTabsLayout({ route, navigation }) {
         Chat: ChatPage,
         Journal: Journal,
         Meditation: Meditation,
+        Support: Support,
         Settings: SettingsScreen,
     };
 
@@ -99,6 +103,37 @@ function MainTabsLayout({ route, navigation }) {
 
 export default function AppNavigator() {
     const { height } = useWindowDimensions();
+    const [initialRoute, setInitialRoute] = useState(null);
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const cachedData = await AsyncStorage.getItem("cachedUser");
+                if (cachedData) {
+                    const { user, timestamp } = JSON.parse(cachedData);
+                    const oneMonth = 30 * 24 * 60 * 60 * 1000;
+                    if (Date.now() - timestamp < oneMonth) {
+                        await AsyncStorage.setItem("userId", user._id);
+                        setInitialRoute(user.personalized ? "MainTabs" : "Personalization");
+                        return;
+                    }
+                    await AsyncStorage.removeItem("cachedUser");
+                }
+            } catch (e) { }
+            setInitialRoute("Login");
+        };
+        checkAuth();
+    }, []);
+
+    if (!initialRoute) {
+        return (
+            <SafeAreaProvider>
+                <View style={[styles.safeArea, { justifyContent: "center", alignItems: "center", minHeight: height }]}>
+                    <ActivityIndicator size="large" color={colors.secondary} />
+                </View>
+            </SafeAreaProvider>
+        );
+    }
 
     return (
         <SafeAreaProvider>
@@ -110,6 +145,7 @@ export default function AppNavigator() {
             <NavigationContainer>
                 <SafeAreaView style={[styles.safeArea, { minHeight: height }]}>
                     <Stack.Navigator
+                        initialRouteName={initialRoute}
                         screenOptions={{
                             headerShown: false,
                             cardStyle: { backgroundColor: colors.background },

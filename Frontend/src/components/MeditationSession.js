@@ -298,12 +298,7 @@ export default function MeditationSession() {
 
                         {/* Inner circle with timer */}
                         {sessionActive ? (<TouchableOpacity
-                            style={[
-                                styles.breathingCircleInner,
-                                {
-                                    transform: [{ scale: pulseAnim }],
-                                }
-                            ]}
+                            style={styles.breathingCircleInner}
                             onPress={isPaused ? resumeSession : pauseSession}
                         >
 
