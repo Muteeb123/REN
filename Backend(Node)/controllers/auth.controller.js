@@ -1,72 +1,127 @@
 // src/controllers/auth.controller.js
 import User from "../Models/User.model.js";
+import fetch from "node-fetch";
 
-// --- SIGNUP: Unified auth endpoint (create if not exists, or return existing user) ---
-// This endpoint handles both login and signup flows:
-// - New users: Created with personalized = false, redirected to Personalization page
-// - Existing users: Returned with their personalized status
-//   - If personalized = true: Redirected to MainTabs
-//   - If personalized = false: Redirected to Personalization page
-export const signup = async (req, res) => {
+// --- STEP 1: Redirect user to Reddit ---
+export const redditAuth = (req, res) => {
+    const { appRedirect } = req.query;
+    const statePayload = {
+        nonce: "random_string",
+        appRedirect: typeof appRedirect === "string" ? appRedirect : null,
+    };
+    const encodedState = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
+
+    console.log("Initiating Reddit Auth...");
+    const url =
+        `https://www.reddit.com/api/v1/authorize?` +
+        `client_id=${process.env.REDDIT_CLIENT_ID}` +
+        `&response_type=code` +
+        `&state=${encodedState}` +
+        `&redirect_uri=${process.env.REDDIT_REDIRECT_URI}` +
+        `&duration=permanent` +
+        `&scope=identity read`;
+
+    res.redirect(url);
+};
+
+// --- STEP 2: Reddit redirects here ---
+export const redditCallback = async (req, res) => {
+    console.log("Received Reddit callback with query:", req.query);
+    const { code, state } = req.query;
+
+    if (!code) {
+        return res.status(400).send(req.query);
+    }
+
     try {
-        const { email, token, name, age, refreshToken } = req.body;
+        // 🔹 Exchange code for token
+        const tokenRes = await fetch(
+            "https://www.reddit.com/api/v1/access_token",
+            {
+                method: "POST",
+                headers: {
+                    Authorization:
+                        "Basic " +
+                        Buffer.from(
+                            process.env.REDDIT_CLIENT_ID + ":"
+                        ).toString("base64"),
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                    grant_type: "authorization_code",
+                    code,
+                    redirect_uri: process.env.REDDIT_REDIRECT_URI,
+                }),
+            }
+        );
 
-        if (!email || !token) {
-            return res.status(400).json({ message: "Email and token are required" });
+        const tokenData = await tokenRes.json();
+
+        if (!tokenData.access_token) {
+            return res.status(400).send("Failed to get access token");
         }
 
-        // Check if the user already exists
-        let existingUser = await User.findOne({ email });
+        // 🔹 Fetch Reddit profile
+        const profileRes = await fetch(
+            "https://oauth.reddit.com/api/v1/me",
+            {
+                headers: {
+                    Authorization: `Bearer ${tokenData.access_token}`,
+                    "User-Agent": "MyApp/1.0",
+                },
+            }
+        );
 
-        if (existingUser) {
-            return res.status(200).json({
-                message: "User already exists",
-                user: existingUser,
+        const profile = await profileRes.json();
+
+        if (!profile?.name) {
+            return res.status(400).send("Failed to fetch profile");
+        }
+
+        const email = `${profile.name}@gmail.com`;
+
+        // 🔹 Find or create user
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            user = await User.create({
+                email,
+                name: profile.name,
+                token: tokenData.access_token,
+                refreshToken: tokenData.refresh_token,
+                age: null,
             });
         }
 
-        // Create a new user (personalized defaults to false)
-        const newUser = await User.create({
-            email,
-            token,
-            name,
-            age,
-            refreshToken,
-        });
+        let appRedirect = process.env.FRONTEND_SUCCESS_REDIRECT || "renapp://auth-success";
 
-        res.status(201).json({
-            message: "User created successfully",
-            user: newUser,
-        });
-    } catch (error) {
-        console.error("Signup Error:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
-};
+        if (state) {
+            try {
+                const decodedState = JSON.parse(
+                    Buffer.from(state, "base64url").toString("utf8")
+                );
 
-// --- LOGIN: Deprecated - Use signup endpoint instead (handles both login and signup) ---
-// Kept for backward compatibility
-export const login = async (req, res) => {
-
-    try {
-        const { email } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ message: "Email is required" });
+                if (
+                    decodedState?.appRedirect &&
+                    typeof decodedState.appRedirect === "string"
+                ) {
+                    appRedirect = decodedState.appRedirect;
+                }
+            } catch {
+                // Ignore invalid state and use fallback redirect
+            }
         }
 
-        const user = await User.findOne({ email });
+        const separator = appRedirect.includes("?") ? "&" : "?";
+        const redirectUrl =
+            `${appRedirect}${separator}` +
+            `userId=${encodeURIComponent(user._id.toString())}` +
+            `&personalized=${encodeURIComponent(String(user.personalized))}`;
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
+        return res.redirect(redirectUrl);
 
-        res.status(200).json({
-            message: "Login successful",
-            user,
-        });
     } catch (error) {
-
-        res.status(500).json({ message: "Server error", error: error.message });
+        console.error("Reddit Auth Error:", error);
+        return res.status(500).send("Auth failed");
     }
 };

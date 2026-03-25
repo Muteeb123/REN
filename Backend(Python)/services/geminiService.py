@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
-
+print(f"Loaded Gemini API Key: {API_KEY[:5]}...")  # Print first 5 characters for verification
 client = genai.Client(api_key= API_KEY)
 MODEL_NAME = "gemma-3-27b-it"
 
