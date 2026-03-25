@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -11,9 +11,10 @@ import {
     Platform,
     Image,
     useWindowDimensions,
+    BackHandler,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Header from "../components/Header";
 
@@ -140,6 +141,226 @@ const meditationData = {
                         "Open your eyes gently, carrying this warmth and compassion with you.",
                     ],
                 },
+                {
+                    id: "4",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "5",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "6",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+                {
+                    id: "7",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "8",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "9",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+                {
+                    id: "10",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "11",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "12",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+                {
+                    id: "13",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "14",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "15",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
             ],
         },
         {
@@ -204,18 +425,580 @@ const meditationData = {
                 },
             ],
         },
+        {
+            id: "3",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "4",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "5",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "6",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "7",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "8",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "9",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "10",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "10",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+        {
+            id: "11",
+            title: "Mindfulness",
+            items: [
+                {
+                    id: "1",
+                    title: "Calm Focus",
+                    duration: "10 mins",
+                    image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
+                },
+                {
+                    id: "2",
+                    title: "Severe Breath",
+                    duration: "20 mins",
+                    image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
+                },
+                {
+                    id: "3",
+                    title: "Inner Pet",
+                    duration: "35 mins",
+                    image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
+                },
+            ],
+        },
+
     ],
 };
 
 export default function Meditation({ currentScreen, onNavigate }) {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
-    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [selectedCategory, setSelectedCategory] = useState(null);
 
-    // Calculate dynamic dimensions based on screen size
-    const meditationItemWidth = moderateScale(160);
-    const meditationItemHeight = verticalScale(210);
     const featuredCardHeight = verticalScale(180);
+
+    // Hardware back: if inside a category, go back to categories list
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                if (selectedCategory) {
+                    setSelectedCategory(null);
+                    return true;
+                }
+                return false;
+            };
+            const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+            return () => sub.remove();
+        }, [selectedCategory])
+    );
 
     const handleNavigateToSession = (session) => {
         navigation.navigate("MeditationSession", {
@@ -224,92 +1007,77 @@ export default function Meditation({ currentScreen, onNavigate }) {
         });
     };
 
-    const renderCategoryPill = ({ item }) => (
-        <TouchableOpacity
-            style={[
-                styles.categoryPill,
-                selectedCategory === item && styles.categoryPillSelected,
-            ]}
-            onPress={() => setSelectedCategory(item)}
-        >
-            <Text
-                style={[
-                    styles.categoryPillText,
-                    selectedCategory === item && styles.categoryPillTextSelected,
-                ]}
-                numberOfLines={1}
+    // ---------- Category Cards View ----------
+    const renderCategoryCard = ({ item }) => {
+        const categoryImage = item.items[0]?.image;
+        return (
+            <TouchableOpacity
+                style={styles.categoryCard}
+                onPress={() => setSelectedCategory(item)}
+                activeOpacity={0.8}
             >
-                {item}
-            </Text>
-        </TouchableOpacity>
-    );
+                {categoryImage && (
+                    <Image source={categoryImage} style={styles.categoryCardImage} />
+                )}
+                <Text style={styles.categoryCardTitle}>{item.title}</Text>
+            </TouchableOpacity>
+        );
+    };
 
-    const renderMeditationItem = ({ item }) => (
+    // ---------- Meditation List Item (inside category) ----------
+    const renderMeditationListItem = ({ item }) => (
         <TouchableOpacity
-            style={[
-                styles.meditationItem,
-                {
-                    width: meditationItemWidth,
-                    height: meditationItemHeight
-                }
-            ]}
+            style={styles.meditationListItem}
             onPress={() => handleNavigateToSession(item)}
+            activeOpacity={0.7}
         >
-            <Image
-                source={item.image}
-                style={[
-                    styles.meditationImage,
-                    { height: verticalScale(100) }
-                ]}
-            />
-            <View style={styles.meditationInfo}>
-                <Text style={styles.meditationTitle} numberOfLines={2}>
-                    {item.title}
-                </Text>
-                <Text style={styles.meditationDuration}>{item.duration}</Text>
-                <View style={styles.playCircle}>
-                    <Ionicons
-                        name="play"
-                        size={moderateScale(16)}
-                        color={colors.primary}
-                    />
-                </View>
+            <View style={styles.meditationListPlayCircle}>
+                <Ionicons style={{ paddingLeft: 4 }} name="play" size={moderateScale(18)} color={colors.primary} />
             </View>
+            <View style={styles.meditationListInfo}>
+                <Text style={styles.meditationListTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.meditationListDuration}>{item.duration}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={moderateScale(18)} color={colors.textLight} />
         </TouchableOpacity>
     );
 
-    const renderCategorySection = ({ item }) => (
-        <View style={styles.categorySection}>
-            <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{item.title}</Text>
-                <TouchableOpacity>
-                    <Text style={styles.viewAllText}>View All →</Text>
-                </TouchableOpacity>
-            </View>
-            <FlatList
-                data={item.items}
-                renderItem={renderMeditationItem}
-                keyExtractor={(i) => i.id}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.meditationList}
-            />
-        </View>
-    );
+    // ---------- Category Detail View ----------
+    if (selectedCategory) {
+        return (
+            <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+                <Header
+                    title={selectedCategory.title}
+                    titleAlignment="center"
+                    showLeftIcon={true}
+                    leftIconName="arrow-back"
+                    onLeftIconPress={() => setSelectedCategory(null)}
+                    showRightIcon={false}
+                    backgroundColor="#FFFFFF"
+                    borderBottomColor="rgba(82, 172, 215, 0.1)"
+                />
+                <FlatList
+                    data={selectedCategory.items}
+                    renderItem={renderMeditationListItem}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.meditationListContainer}
+                    showsVerticalScrollIndicator={false}
+                    ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+                />
+            </SafeAreaView>
+        );
+    }
 
+    // ---------- Categories Home View ----------
     return (
-
         <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
             <Header
                 title="Meditations"
                 titleAlignment="center"
                 showLeftIcon={false}
-                showRightIcon={true}
-                rightIconName="search-outline"
-
+                showRightIcon={false}
                 backgroundColor="#FFFFFF"
                 borderBottomColor="rgba(82, 172, 215, 0.1)"
-                rightIconSize={32}
             />
 
             <ScrollView
@@ -317,13 +1085,7 @@ export default function Meditation({ currentScreen, onNavigate }) {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Featured Meditation */}
-                <View
-                    style={[
-                        styles.featuredCard,
-                        { height: featuredCardHeight }
-                    ]}
-
-                >
+                <View style={[styles.featuredCard, { height: featuredCardHeight }]}>
                     <View style={styles.featuredContent}>
                         <Text style={styles.featuredTitle}>
                             {meditationData.featured.title}
@@ -353,13 +1115,18 @@ export default function Meditation({ currentScreen, onNavigate }) {
                     </View>
                 </View>
 
-                {/* Category Sections */}
+                {/* Category Cards */}
+                <View style={styles.categoriesGridHeader}>
+                    <Text style={styles.categoriesGridTitle}>Categories</Text>
+                </View>
                 <FlatList
                     data={meditationData.categories}
-                    renderItem={renderCategorySection}
+                    renderItem={renderCategoryCard}
                     keyExtractor={(item) => item.id}
+                    numColumns={2}
                     scrollEnabled={false}
-                    contentContainerStyle={styles.categoriesContainer}
+                    contentContainerStyle={styles.categoriesGrid}
+                    columnWrapperStyle={styles.categoriesRow}
                 />
             </ScrollView>
         </SafeAreaView>
@@ -374,9 +1141,6 @@ const styles = StyleSheet.create({
     scrollContainer: {
         paddingBottom: verticalScale(40),
     },
-    header: { display: "none" },
-    headerButton: { display: "none" },
-    headerTitle: { display: "none" },
 
     // Featured Card
     featuredCard: {
@@ -425,128 +1189,11 @@ const styles = StyleSheet.create({
         height: scale(12),
         borderRadius: scale(8),
     },
-    featuredDividerSmall: {
-        flex: 1.5,
-    },
-    featuredDividerMedium: {
-        flex: 2.5,
-    },
-    featuredDividerLarge: {
-        flex: 3,
-    },
-    featuredDividerBlue: {
-        backgroundColor: colors.secondary,
-    },
-    featuredDividerWhite: {
-        backgroundColor: colors.primary,
-    },
-
-    categoriesContainer: {
-        paddingHorizontal: moderateScale(20)
-    },
-    categorySection: {
-        marginBottom: verticalScale(30)
-    },
-    sectionHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: verticalScale(14),
-    },
-    sectionTitle: {
-        fontSize: getFontSize(18),
-        fontWeight: "700",
-        color: colors.textDark,
-        flex: 1,
-    },
-    viewAllText: {
-        fontSize: getFontSize(14),
-        color: colors.secondary,
-        fontWeight: "600"
-    },
-    meditationList: {
-        paddingRight: moderateScale(20)
-    },
-
-    // Meditation Item
-    meditationItem: {
-        marginRight: moderateScale(14),
-        borderRadius: moderateScale(14),
-        overflow: "hidden",
-        backgroundColor: colors.card,
-        alignItems: "center",
-        padding: moderateScale(12),
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.shadow,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 5,
-            },
-            android: {
-                elevation: 3,
-                shadowColor: colors.shadow,
-            },
-        }),
-    },
-    meditationImage: {
-        width: "100%",
-        resizeMode: "contain",
-        marginBottom: verticalScale(10),
-    },
-    meditationInfo: {
-        alignItems: "center",
-        flex: 1,
-        justifyContent: "space-between",
-    },
-    meditationTitle: {
-        fontSize: getFontSize(14),
-        fontWeight: "600",
-        color: colors.textDark,
-        textAlign: "center",
-        lineHeight: getFontSize(18),
-    },
-    meditationDuration: {
-        fontSize: getFontSize(12),
-        color: colors.textLight,
-        textAlign: "center",
-        marginVertical: verticalScale(4),
-    },
-
-    playCircle: {
-        width: moderateScale(32),
-        height: moderateScale(32),
-        borderRadius: moderateScale(16),
-        backgroundColor: colors.secondary,
-        justifyContent: "center",
-        alignItems: "center",
-        marginTop: verticalScale(8),
-    },
-
-    categoriesList: {
-        paddingVertical: verticalScale(8),
-    },
-    categoryPill: {
-        backgroundColor: "rgba(255, 255, 255, 0.7)",
-        paddingHorizontal: moderateScale(14),
-        paddingVertical: verticalScale(6),
-        borderRadius: moderateScale(20),
-        marginRight: moderateScale(8),
-        minWidth: moderateScale(80),
-        alignItems: "center",
-    },
-    categoryPillSelected: {
-        backgroundColor: colors.secondary
-    },
-    categoryPillText: {
-        fontSize: getFontSize(13),
-        color: colors.textDark,
-        fontWeight: "500",
-    },
-    categoryPillTextSelected: {
-        color: colors.primary,
-        fontWeight: "700"
-    },
+    featuredDividerSmall: { flex: 1.5 },
+    featuredDividerMedium: { flex: 2.5 },
+    featuredDividerLarge: { flex: 3 },
+    featuredDividerBlue: { backgroundColor: colors.secondary },
+    featuredDividerWhite: { backgroundColor: colors.primary },
 
     startButton: {
         flexDirection: "row",
@@ -567,5 +1214,107 @@ const styles = StyleSheet.create({
     },
     playIcon: {
         marginLeft: moderateScale(2)
+    },
+
+    // Category Cards Grid
+    categoriesGridHeader: {
+        paddingHorizontal: moderateScale(20),
+        marginBottom: verticalScale(12),
+    },
+    categoriesGridTitle: {
+        fontSize: getFontSize(20),
+        fontWeight: "700",
+        color: colors.textDark,
+    },
+    categoriesGrid: {
+        paddingHorizontal: moderateScale(16),
+    },
+    categoriesRow: {
+        justifyContent: "space-between",
+        marginBottom: moderateScale(14),
+    },
+    categoryCard: {
+        width: (SCREEN_WIDTH - moderateScale(16) * 2 - moderateScale(14)) / 2,
+        backgroundColor: colors.card,
+        borderRadius: moderateScale(16),
+        alignItems: "center",
+        paddingVertical: moderateScale(20),
+        paddingHorizontal: moderateScale(12),
+        ...Platform.select({
+            ios: {
+                shadowColor: colors.shadow,
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.12,
+                shadowRadius: 6,
+            },
+            android: {
+                elevation: 4,
+                shadowColor: colors.shadow,
+            },
+        }),
+    },
+    categoryCardImage: {
+        width: moderateScale(70),
+        height: moderateScale(70),
+        resizeMode: "contain",
+        marginBottom: verticalScale(12),
+    },
+    categoryCardTitle: {
+        fontSize: getFontSize(16),
+        fontWeight: "700",
+        color: colors.textDark,
+        textAlign: "center",
+    },
+
+    // Meditation List (inside category detail)
+    meditationListContainer: {
+        paddingHorizontal: moderateScale(16),
+        paddingTop: verticalScale(12),
+        paddingBottom: verticalScale(40),
+    },
+    meditationListItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.card,
+        borderRadius: moderateScale(14),
+        paddingVertical: moderateScale(14),
+        paddingHorizontal: moderateScale(14),
+        ...Platform.select({
+            ios: {
+                shadowColor: colors.shadow,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 3,
+                shadowColor: colors.shadow,
+            },
+        }),
+    },
+    meditationListPlayCircle: {
+        width: moderateScale(42),
+        height: moderateScale(42),
+        borderRadius: moderateScale(21),
+        backgroundColor: colors.secondary,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: moderateScale(14),
+    },
+    meditationListInfo: {
+        flex: 1,
+    },
+    meditationListTitle: {
+        fontSize: getFontSize(16),
+        fontWeight: "600",
+        color: colors.textDark,
+    },
+    meditationListDuration: {
+        fontSize: getFontSize(13),
+        color: colors.textLight,
+        marginTop: verticalScale(2),
+    },
+    listSeparator: {
+        height: moderateScale(10),
     },
 });

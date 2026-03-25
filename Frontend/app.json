@@ -21,7 +21,8 @@
         "foregroundImage": "./assets/ren.png",
         "backgroundColor": "transparent"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.muteeb1098.redditemotionnavigator"
     },
     "web": {
       "favicon": "./assets/ren.png"

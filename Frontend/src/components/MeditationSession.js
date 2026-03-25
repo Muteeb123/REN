@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
     View,
     Text,
@@ -57,24 +57,99 @@ const colors = {
 export default function MeditationSession() {
     const navigation = useNavigation();
     const route = useRoute();
-    const { session, durationOptions = [2, 3, 4, 5, "Custom"] } = route.params || {};
+    const { session } = route.params || {};
 
-    const [selectedDuration, setSelectedDuration] = useState(2);
+    const speedOptions = [
+        { label: "0.5x", value: 0.5 },
+        { label: "0.75x", value: 0.75 },
+        { label: "1x", value: 1.0 },
+        { label: "1.25x", value: 1.25 },
+        { label: "1.5x", value: 1.5 },
+    ];
+
+    const [selectedSpeed, setSelectedSpeed] = useState(1.0);
     const [isBreathing, setIsBreathing] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(120);
     const [sessionActive, setSessionActive] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [voices, setVoices] = useState([]);
     const [selectedVoice, setSelectedVoice] = useState(null);
     const [loadingVoices, setLoadingVoices] = useState(true);
+    const [isSpeakingNow, setIsSpeakingNow] = useState(false);
+    const [currentWordIdx, setCurrentWordIdx] = useState(0);
+    const TELE_WORDS_PER_LINE = 8;
+
+    const allWords = useMemo(
+        () => (session?.script || []).flatMap(line => line.split(/\s+/).filter(Boolean)),
+        [session?.script]
+    );
+
+    const BAR_COUNT = 35;
+    const VISUALIZER_COLORS = (() => {
+        const stops = [
+            [56, 182, 255],   // #38b6ff blue
+            [56, 182, 255],   // #38b6ff blue
+
+
+        ];
+        const gradient = [];
+        for (let i = 0; i < BAR_COUNT; i++) {
+            const t = i / (BAR_COUNT - 1) * (stops.length - 1);
+            const idx = Math.min(Math.floor(t), stops.length - 2);
+            const p = t - idx;
+            const r = Math.round(stops[idx][0] + (stops[idx + 1][0] - stops[idx][0]) * p);
+            const g = Math.round(stops[idx][1] + (stops[idx + 1][1] - stops[idx][1]) * p);
+            const b = Math.round(stops[idx][2] + (stops[idx + 1][2] - stops[idx][2]) * p);
+            gradient.push(`rgb(${r},${g},${b})`);
+        }
+        return gradient;
+    })();
+
+    const pickRandomVisualizerColor = () => {
+        const idx = Math.floor(Math.random() * VISUALIZER_COLORS.length);
+        return VISUALIZER_COLORS[idx] || colors.secondary;
+    };
+
+    // Pre-compute random base heights for organic look
+    const BAR_BASE_HEIGHTS = useRef(
+        Array.from({ length: BAR_COUNT }, (_, i) => {
+            const center = BAR_COUNT / 2;
+            const dist = Math.abs(i - center) / center;
+            return 0.3 + (1 - dist) * 0.5 + Math.random() * 0.2;
+        })
+    ).current;
 
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
-    const waveAnim = useRef(new Animated.Value(0)).current;
-    const timerRef = useRef(null);
-    const scriptIndexRef = useRef(0);
+    const waveBarAnims = useRef(Array.from({ length: BAR_COUNT }, () => new Animated.Value(0.2))).current;
     const speechTimeoutRef = useRef(null);
     const isSpeakingRef = useRef(false);
+    const waveAnimRef = useRef(null);
+    const windDownRef = useRef(null);
+    const wordIntervalRef = useRef(null);
+    const currentWordIdxRef = useRef(0);
+    const selectedSpeedRef = useRef(selectedSpeed);
+    const selectedVoiceRef = useRef(null);
+    const speechFinishedRef = useRef(false);
+    const wordsFinishedRef = useRef(false);
+    const autoCompleteEnabledRef = useRef(false);
+
+    const markSpeechFinished = () => {
+        speechFinishedRef.current = true;
+        if (autoCompleteEnabledRef.current && wordsFinishedRef.current) {
+            handleSessionComplete();
+        }
+    };
+
+    const markWordsFinished = () => {
+        wordsFinishedRef.current = true;
+        if (autoCompleteEnabledRef.current && speechFinishedRef.current) {
+            handleSessionComplete();
+        }
+    };
+
+    // Keep speed/voice/offsets refs synced for stale-closure-safe callbacks
+    useEffect(() => { selectedSpeedRef.current = selectedSpeed; }, [selectedSpeed]);
+    useEffect(() => { selectedVoiceRef.current = selectedVoice; }, [selectedVoice]);
 
     // Friendly persona names to assign to unique voices
     const personaNames = [
@@ -125,155 +200,181 @@ export default function MeditationSession() {
     // Breathing animation
     useEffect(() => {
         if (isBreathing && sessionActive && !isPaused) {
-            // Main breathing animation - continues from current value
             const breathingSequence = Animated.sequence([
-                Animated.timing(scaleAnim, {
-                    toValue: 1.3,
-                    duration: 4000,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(scaleAnim, {
-                    toValue: 1,
-                    duration: 4000,
-                    useNativeDriver: true,
-                }),
+                Animated.timing(scaleAnim, { toValue: 1.3, duration: 4000, useNativeDriver: true }),
+                Animated.timing(scaleAnim, { toValue: 1, duration: 4000, useNativeDriver: true }),
             ]);
-
-            // Loop the breathing sequence
             const runBreathing = () => {
                 breathingSequence.start(({ finished }) => {
-                    if (finished && isBreathing && sessionActive && !isPaused) {
-                        runBreathing();
-                    }
+                    if (finished && isBreathing && sessionActive && !isPaused) runBreathing();
                 });
             };
             runBreathing();
 
-            // Subtle pulse animation
             const pulseSequence = Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.1,
-                    duration: 2000,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 2000,
-                    useNativeDriver: true,
-                }),
+                Animated.timing(pulseAnim, { toValue: 1.1, duration: 2000, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
             ]);
-
             const runPulse = () => {
                 pulseSequence.start(({ finished }) => {
-                    if (finished && isBreathing && sessionActive && !isPaused) {
-                        runPulse();
-                    }
+                    if (finished && isBreathing && sessionActive && !isPaused) runPulse();
                 });
             };
             runPulse();
-
-            // Wave animation
-            const waveSequence = Animated.sequence([
-                Animated.timing(waveAnim, {
-                    toValue: 1,
-                    duration: 2000,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(waveAnim, {
-                    toValue: 0,
-                    duration: 2000,
-                    useNativeDriver: true,
-                }),
-            ]);
-
-            const runWave = () => {
-                waveSequence.start(({ finished }) => {
-                    if (finished && isBreathing && sessionActive && !isPaused) {
-                        runWave();
-                    }
-                });
-            };
-            runWave();
         } else if (isPaused) {
-            // When paused, freeze animations at current value
             scaleAnim.stopAnimation();
             pulseAnim.stopAnimation();
-            waveAnim.stopAnimation();
         }
-
-        // Cleanup
         return () => {
             scaleAnim.stopAnimation();
             pulseAnim.stopAnimation();
-            waveAnim.stopAnimation();
         };
     }, [isBreathing, sessionActive, isPaused]);
 
-    // Timer effect
+    // Voice waveform bar animation — staggered organic wave with gradual wind-down
     useEffect(() => {
-        if (sessionActive && !isPaused && timeLeft > 0) {
-            timerRef.current = setInterval(() => {
-                setTimeLeft((prev) => {
-                    if (prev <= 1) {
-                        handleSessionComplete();
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else {
-            clearInterval(timerRef.current);
+        // Cancel any pending wind-down
+        if (windDownRef.current) {
+            windDownRef.current.forEach(a => a?.stop());
+            windDownRef.current = null;
         }
 
-        return () => clearInterval(timerRef.current);
-    }, [sessionActive, isPaused, timeLeft]);
+        if (sessionActive && !isPaused && isSpeakingNow) {
+            // Stop previous loops before starting new ones
+            if (waveAnimRef.current) waveAnimRef.current.forEach(a => a?.stop());
+            const animations = waveBarAnims.map((anim, i) => {
+                const baseH = BAR_BASE_HEIGHTS[i];
+                const speed = 350 + Math.random() * 300;
+                return Animated.loop(
+                    Animated.sequence([
+                        Animated.delay(i * 40),
+                        Animated.timing(anim, { toValue: baseH, duration: speed, useNativeDriver: true }),
+                        Animated.timing(anim, { toValue: baseH * 0.25, duration: speed, useNativeDriver: true }),
+                    ])
+                );
+            });
+            animations.forEach(a => a.start());
+            waveAnimRef.current = animations;
+        } else if (sessionActive && !isPaused && !isSpeakingNow) {
+            // Gradual wind-down: stop loops then ease bars to idle
+            if (waveAnimRef.current) waveAnimRef.current.forEach(a => a?.stop());
+            waveAnimRef.current = null;
+            const windDown = waveBarAnims.map((anim, i) =>
+                Animated.timing(anim, {
+                    toValue: 0.08,
+                    duration: 600 + i * 20,
+                    useNativeDriver: true,
+                })
+            );
+            windDown.forEach(a => a.start());
+            windDownRef.current = windDown;
+        } else if (sessionActive && isPaused) {
+            // Pause: freeze bars at current heights (no reset)
+            if (waveAnimRef.current) waveAnimRef.current.forEach(a => a?.stop());
+            if (windDownRef.current) windDownRef.current.forEach(a => a?.stop());
+            waveAnimRef.current = null;
+            windDownRef.current = null;
+        } else {
+            // Not active — reset to idle
+            if (waveAnimRef.current) waveAnimRef.current.forEach(a => a?.stop());
+            waveAnimRef.current = null;
+            waveBarAnims.forEach(a => a.setValue(0.2));
+        }
+        return () => {
+            if (waveAnimRef.current) waveAnimRef.current.forEach(a => a?.stop());
+            if (windDownRef.current) windDownRef.current.forEach(a => a?.stop());
+        };
+    }, [sessionActive, isPaused, isSpeakingNow]);
 
-    // Script speech effect
+    // Script speech effect — one continuous utterance with punctuation-aware subtitle timing
     useEffect(() => {
         const script = session?.script;
-        if (!script || script.length === 0) return;
+        if (!script || script.length === 0 || !sessionActive || isPaused || isSpeakingRef.current) return;
 
-        if (sessionActive && !isPaused && !isSpeakingRef.current) {
-            const speakNext = () => {
-                const index = scriptIndexRef.current;
-                if (index >= script.length || !sessionActive) return;
+        const spd = selectedSpeedRef.current;
 
-                isSpeakingRef.current = true;
-                Speech.speak(script[index], {
-                    language: selectedVoice?.language || "en-US",
-                    ...(selectedVoice ? { voice: selectedVoice.identifier } : {}),
-                    rate: 0.85,
-                    pitch: 1.0,
-                    onDone: () => {
-                        isSpeakingRef.current = false;
-                        scriptIndexRef.current = index + 1;
-                        if (scriptIndexRef.current < script.length) {
-                            // Pause between lines for breathing space
-                            speechTimeoutRef.current = setTimeout(speakNext, 3000);
-                        }
-                    },
-                    onStopped: () => {
-                        isSpeakingRef.current = false;
-                    },
-                    onError: () => {
-                        isSpeakingRef.current = false;
-                    },
-                });
-            };
-
-            speakNext();
+        const speechRate = Math.max(0.2, spd);
+        const voice = selectedVoiceRef.current;
+        const startIdx = currentWordIdxRef.current;
+        const remainingWords = allWords.slice(startIdx);
+        if (remainingWords.length === 0) {
+            handleSessionComplete();
+            return;
         }
+
+        const effectiveRate = speechRate * 1.15;
+        // Estimate speaking pace by character throughput, then weight each word.
+        const charsPerSecondAtNormalRate = 13;
+        const cps = charsPerSecondAtNormalRate * effectiveRate;
+        const wordDurations = remainingWords.map((word, i) => {
+            const clean = word.replace(/[.,!?;:()"'\-]/g, '');
+            const charCount = Math.max(clean.length, 1);
+            let ms = (charCount / cps) * 1000;
+
+            // Short words are spoken quickly, long words need more hold time.
+            if (charCount <= 2) ms *= 0.78;
+            if (charCount >= 8) ms *= 1.18;
+
+            // Natural phrase/sentence pauses from punctuation.
+            if (/[.!?][\"']?$/.test(word)) ms += 360 / effectiveRate;
+            else if (/[,;:][\"']?$/.test(word)) ms += 170 / effectiveRate;
+
+            // Tiny easing before conjunctions improves perceived sync.
+            const nextWord = remainingWords[i + 1]?.toLowerCase?.() || '';
+            if (nextWord === 'and' || nextWord === 'but' || nextWord === 'or') {
+                ms += 35;
+            }
+
+            return Math.max(70, Math.min(1200, Math.round(ms)));
+        });
+
+        isSpeakingRef.current = true;
+        setIsSpeakingNow(true);
+        speechFinishedRef.current = false;
+        wordsFinishedRef.current = false;
+        autoCompleteEnabledRef.current = true;
+
+        // One-go speech from current position (TTS naturally pauses at punctuation)
+        Speech.speak(remainingWords.join(' '), {
+            language: voice?.language || 'en-US',
+            ...(voice ? { voice: voice.identifier } : {}),
+            rate: speechRate,
+            pitch: 1.0,
+            onDone: markSpeechFinished,
+            onStopped: markSpeechFinished,
+            onError: markSpeechFinished,
+        });
+
+        // Subtitle progression continues independent of audio state
+        let localIdx = 0;
+        const runWordTick = () => {
+            const nextGlobalIdx = startIdx + localIdx + 1;
+            currentWordIdxRef.current = nextGlobalIdx;
+            setCurrentWordIdx(nextGlobalIdx);
+
+            localIdx += 1;
+            if (localIdx >= wordDurations.length) {
+                isSpeakingRef.current = false;
+                setIsSpeakingNow(false);
+                markWordsFinished();
+                return;
+            }
+            speechTimeoutRef.current = setTimeout(runWordTick, wordDurations[localIdx]);
+        };
+
+        speechTimeoutRef.current = setTimeout(runWordTick, wordDurations[0]);
 
         return () => {
             clearTimeout(speechTimeoutRef.current);
         };
-    }, [sessionActive, isPaused, selectedVoice]);
+    }, [sessionActive, isPaused, allWords]);
 
     // Cleanup speech on unmount
     useEffect(() => {
         return () => {
             Speech.stop();
             clearTimeout(speechTimeoutRef.current);
+            clearInterval(wordIntervalRef.current);
         };
     }, []);
 
@@ -314,68 +415,71 @@ export default function MeditationSession() {
     }, [sessionActive]);
 
     const startSession = () => {
-        scriptIndexRef.current = 0;
         isSpeakingRef.current = false;
+        currentWordIdxRef.current = 0;
+        speechFinishedRef.current = false;
+        wordsFinishedRef.current = false;
+        autoCompleteEnabledRef.current = true;
+        setCurrentWordIdx(0);
         setSessionActive(true);
         setIsBreathing(true);
         setIsPaused(false);
-        const durationInSeconds = selectedDuration * 60;
-        setTimeLeft(durationInSeconds);
     };
 
     const pauseSession = () => {
+        autoCompleteEnabledRef.current = false;
         Speech.stop();
         clearTimeout(speechTimeoutRef.current);
+        clearInterval(wordIntervalRef.current);
         isSpeakingRef.current = false;
+        setIsSpeakingNow(false);
         setIsPaused(true);
         setIsBreathing(false);
     };
 
     const resumeSession = () => {
+        autoCompleteEnabledRef.current = true;
+        speechFinishedRef.current = false;
+        wordsFinishedRef.current = false;
         setIsPaused(false);
         setIsBreathing(true);
     };
 
     const resetSession = () => {
+        autoCompleteEnabledRef.current = false;
         Speech.stop();
         clearTimeout(speechTimeoutRef.current);
+        clearInterval(wordIntervalRef.current);
         isSpeakingRef.current = false;
-        scriptIndexRef.current = 0;
+        currentWordIdxRef.current = 0;
+        speechFinishedRef.current = false;
+        wordsFinishedRef.current = false;
+        setCurrentWordIdx(0);
+        setIsSpeakingNow(false);
         setIsPaused(true);
         setIsBreathing(false);
-        const durationInSeconds = selectedDuration * 60;
-        setTimeLeft(durationInSeconds);
         scaleAnim.stopAnimation();
         pulseAnim.stopAnimation();
-        waveAnim.stopAnimation();
     };
 
     const handleSessionComplete = () => {
+        autoCompleteEnabledRef.current = false;
         Speech.stop();
         clearTimeout(speechTimeoutRef.current);
+        clearInterval(wordIntervalRef.current);
         isSpeakingRef.current = false;
-        scriptIndexRef.current = 0;
+        currentWordIdxRef.current = 0;
+        speechFinishedRef.current = false;
+        wordsFinishedRef.current = false;
+        setCurrentWordIdx(0);
+        setIsSpeakingNow(false);
         setSessionActive(false);
         setIsBreathing(false);
         setIsPaused(false);
-        clearInterval(timerRef.current);
     };
 
-    const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    };
-
-    const handleDurationSelect = (duration) => {
-        if (duration === "Custom") {
-            setSelectedDuration(5);
-            return;
-        }
-        setSelectedDuration(duration);
-        if (!sessionActive) {
-            setTimeLeft(duration * 60);
-        }
+    const handleSpeedSelect = (speed) => {
+        setSelectedSpeed(speed);
     };
 
     const sessionTitle = session?.title || "Deep Breath Dynamics";
@@ -413,73 +517,91 @@ export default function MeditationSession() {
                             ]}
                         />
 
-                        {/* Inner circle with timer */}
-                        {sessionActive ? (<TouchableOpacity
-                            style={styles.breathingCircleInner}
-                            onPress={isPaused ? resumeSession : pauseSession}
-                        >
-
-                            <View style={styles.timerContainer}
-
-                            >
-                                <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
-                                <Text style={styles.timerLabel}>
-                                    {isPaused ? "PAUSED" : "REMAINING"}
-                                </Text>
-                            </View>
-
-
-
-                        </TouchableOpacity>) : (
+                        {/* Inner circle — mute/unmute; play when paused */}
+                        {!sessionActive &&
                             <TouchableOpacity
                                 style={styles.breathingCircleInner}
                                 onPress={startSession}
                             >
-                                <View style={styles.readyContainer}
-
-
-                                >
-                                    <Ionicons
-                                        name="play"
-                                        size={moderateScale(40)}
-                                        color={colors.secondary}
-                                        paddingLeft={moderateScale(4)}
-                                    />
+                                <View style={styles.readyContainer}>
+                                    <Ionicons name="play" size={moderateScale(40)} color={colors.secondary} />
                                     <Text style={styles.readyText}>Ready</Text>
-
                                 </View>
                             </TouchableOpacity>
-                        )
                         }
+                        {sessionActive && (
+                            <View style={styles.visualizerContainer}>
+                                {waveBarAnims.map((anim, i) => (
+                                    <Animated.View
+                                        key={i}
+                                        style={[
+                                            styles.vizBar,
+                                            {
+                                                backgroundColor: VISUALIZER_COLORS[i],
+                                                transform: [{
+                                                    scaleY: anim.interpolate({
+                                                        inputRange: [0, 1],
+                                                        outputRange: [0.15, 1],
+                                                    }),
+                                                }],
+                                            },
+                                        ]}
+                                    />
+                                ))}
+                            </View>
+                        )}
                     </View>
+
+                    {/* Audio Visualizer */}
+                    {/* {sessionActive && (
+                        <View style={styles.visualizerContainer}>
+                            {waveBarAnims.map((anim, i) => (
+                                <Animated.View
+                                    key={i}
+                                    style={[
+                                        styles.vizBar,
+                                        {
+                                            backgroundColor: VISUALIZER_COLORS[i],
+                                            transform: [{
+                                                scaleY: anim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [0.15, 1],
+                                                }),
+                                            }],
+                                        },
+                                    ]}
+                                />
+                            ))}
+                        </View>
+                    )} */}
+
                 </View>
 
                 {/* Duration & Voice Selection - Only show when session is not active */}
                 {!sessionActive && (
                     <View style={styles.durationSection}>
-                        <Text style={styles.durationTitle}>Select Duration</Text>
+                        <Text style={styles.durationTitle}>Select Speed</Text>
                         <View style={styles.durationGrid}>
-                            {durationOptions.map((duration) => (
+                            {speedOptions.map((option) => (
                                 <TouchableOpacity
-                                    key={duration}
+                                    key={option.label}
                                     style={[
                                         styles.durationButton,
-                                        selectedDuration === duration && styles.durationButtonSelected,
-                                        duration === "Custom" && styles.customButton,
+                                        selectedSpeed === option.value && styles.durationButtonSelected,
                                     ]}
-                                    onPress={() => handleDurationSelect(duration)}
+                                    onPress={() => handleSpeedSelect(option.value)}
                                 >
                                     <Text style={[
                                         styles.durationButtonText,
-                                        selectedDuration === duration && styles.durationButtonTextSelected,
+                                        selectedSpeed === option.value && styles.durationButtonTextSelected,
                                     ]}>
-                                        {duration === "Custom" ? "Custom" : `${duration} min`}
+                                        {option.label}
                                     </Text>
-                                    {selectedDuration === duration && (
+                                    {/* {selectedSpeed === option.value && (
                                         <View style={styles.selectedIndicator}>
                                             <Ionicons name="checkmark" size={moderateScale(16)} color={colors.primary} />
                                         </View>
-                                    )}
+                                    )} */}
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -535,12 +657,8 @@ export default function MeditationSession() {
                 <View style={styles.controls}>
                     {!sessionActive ? (
                         <TouchableOpacity
-                            style={[
-                                styles.startButton,
-                                !selectedDuration && styles.startButtonDisabled
-                            ]}
+                            style={styles.startButton}
                             onPress={startSession}
-                            disabled={!selectedDuration}
                         >
                             <Text style={styles.startButtonText}>Begin Meditation</Text>
                             <Ionicons
@@ -672,6 +790,40 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         marginTop: verticalScale(4),
         letterSpacing: 0.5,
+    },
+    waveformContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        height: moderateScale(50),
+        gap: moderateScale(5),
+    },
+    waveBar: {
+        width: moderateScale(6),
+        height: moderateScale(40),
+        borderRadius: moderateScale(3),
+        backgroundColor: colors.secondary,
+    },
+    visualizerContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        height: verticalScale(90),
+        width: "100%",
+        marginTop: verticalScale(8),
+        gap: 2,
+    },
+    vizBar: {
+        flex: 1,
+        maxWidth: moderateScale(7),
+        height: "100%",
+        borderRadius: moderateScale(3),
+    },
+    progressText: {
+        fontSize: moderateScale(12),
+        color: colors.textLight,
+        marginTop: verticalScale(6),
+        fontWeight: "500",
     },
     readyContainer: {
         alignItems: "center",

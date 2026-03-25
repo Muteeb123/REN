@@ -421,20 +421,17 @@ const styles = StyleSheet.create({
     },
     reactionBadge: {
         position: "absolute",
-        bottom: -moderateScale(10),
-        left: moderateScale(12),
-        backgroundColor: "#FFFFFF",
+        bottom: -moderateScale(14),
+        right: moderateScale(12),
+        backgroundColor: "transparent",
         borderRadius: moderateScale(12),
         paddingHorizontal: moderateScale(6),
         paddingVertical: moderateScale(2),
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.15,
-        shadowRadius: 2,
+
+
     },
     reactionEmoji: {
-        fontSize: moderateScale(14),
+        fontSize: moderateScale(20),
     },
     dateSeparatorContainer: {
         flexDirection: "row",

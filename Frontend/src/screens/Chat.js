@@ -21,9 +21,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-native-uuid";
 import { useNavigation } from "@react-navigation/native";
+import Markdown from 'react-native-markdown-display';
 
 // local asset
-import BotIcon from "../../assets/logo.png";
+import BotIcon from "../../assets/ren.png";
 import { PYTHON_BACKEND_URL } from "../config/urls";
 import Header from "../components/Header";
 
@@ -92,21 +93,76 @@ const DateSeparator = ({ label }) => (
 );
 
 // ======== Typing Indicator ========
+const AnimatedDot = ({ delay }) => {
+    const opacity = useRef(new Animated.Value(0.3)).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.delay(delay),
+                Animated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+                Animated.timing(opacity, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, []);
+
+    return <Animated.View style={[styles.dot, { opacity }]} />;
+};
+
 const TypingIndicator = ({ size = 22 }) => (
     <View style={[styles.messageBubble, styles.botBubble, { flexDirection: "row", alignItems: "center" }]}>
         <Image source={BotIcon} style={{ width: size, height: size, marginRight: moderateScale(8), borderRadius: 50 }} />
         <View style={{ flexDirection: "row" }}>
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
+            <AnimatedDot delay={0} />
+            <AnimatedDot delay={300} />
+            <AnimatedDot delay={400} />
         </View>
     </View>
 );
 
 // ======== Message Bubble ========
+const markdownBotStyles = StyleSheet.create({
+    body: { fontSize: moderateScale(15), lineHeight: moderateScale(22), color: colors.textDark },
+    paragraph: { marginTop: 0, marginBottom: moderateScale(4) },
+    strong: { fontWeight: '700' },
+    em: { fontStyle: 'italic' },
+    heading1: { fontSize: moderateScale(20), fontWeight: '700', marginBottom: moderateScale(4) },
+    heading2: { fontSize: moderateScale(18), fontWeight: '700', marginBottom: moderateScale(4) },
+    heading3: { fontSize: moderateScale(16), fontWeight: '600', marginBottom: moderateScale(4) },
+    bullet_list: { marginVertical: moderateScale(2) },
+    ordered_list: { marginVertical: moderateScale(2) },
+    list_item: { marginVertical: moderateScale(1) },
+    code_inline: { backgroundColor: '#E0E0E0', borderRadius: 4, paddingHorizontal: 4, fontSize: moderateScale(13), fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    fence: { backgroundColor: '#E8E8E8', borderRadius: 8, padding: moderateScale(8), fontSize: moderateScale(13), fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    code_block: { backgroundColor: '#E8E8E8', borderRadius: 8, padding: moderateScale(8), fontSize: moderateScale(13), fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    blockquote: { borderLeftWidth: 3, borderLeftColor: colors.secondary, paddingLeft: moderateScale(8), marginVertical: moderateScale(4) },
+    link: { color: colors.secondary, textDecorationLine: 'underline' },
+    hr: { backgroundColor: colors.borderLight, height: 1, marginVertical: moderateScale(6) },
+});
+
+const markdownUserStyles = StyleSheet.create({
+    body: { fontSize: moderateScale(15), lineHeight: moderateScale(22), color: 'white', fontWeight: '500' },
+    paragraph: { marginTop: 0, marginBottom: moderateScale(4) },
+    strong: { fontWeight: '700' },
+    em: { fontStyle: 'italic' },
+    heading1: { fontSize: moderateScale(20), fontWeight: '700', marginBottom: moderateScale(4), color: 'white' },
+    heading2: { fontSize: moderateScale(18), fontWeight: '700', marginBottom: moderateScale(4), color: 'white' },
+    heading3: { fontSize: moderateScale(16), fontWeight: '600', marginBottom: moderateScale(4), color: 'white' },
+    bullet_list: { marginVertical: moderateScale(2) },
+    ordered_list: { marginVertical: moderateScale(2) },
+    list_item: { marginVertical: moderateScale(1) },
+    code_inline: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, paddingHorizontal: 4, fontSize: moderateScale(13), color: 'white', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    fence: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: moderateScale(8), fontSize: moderateScale(13), color: 'white', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    code_block: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: moderateScale(8), fontSize: moderateScale(13), color: 'white', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    blockquote: { borderLeftWidth: 3, borderLeftColor: 'rgba(255,255,255,0.5)', paddingLeft: moderateScale(8), marginVertical: moderateScale(4) },
+    link: { color: 'white', textDecorationLine: 'underline' },
+    hr: { backgroundColor: 'rgba(255,255,255,0.3)', height: 1, marginVertical: moderateScale(6) },
+});
+
 const MessageBubble = React.memo(({ text, isUser, animatedValue, timestamp }) => {
     const bubbleStyle = isUser ? styles.userBubble : styles.botBubble;
-    const textStyle = isUser ? styles.userText : styles.botText;
 
     const animStyle = {
         opacity: animatedValue,
@@ -121,7 +177,9 @@ const MessageBubble = React.memo(({ text, isUser, animatedValue, timestamp }) =>
 
     return (
         <Animated.View style={[styles.messageBubble, bubbleStyle, animStyle]}>
-            <Text style={[styles.messageText, textStyle]}>{text}</Text>
+            <Markdown style={isUser ? markdownUserStyles : markdownBotStyles}>
+                {text}
+            </Markdown>
             {timestamp && (
                 <Text style={[styles.timestampText, isUser && styles.timestampUser]}>{timestamp}</Text>
             )}

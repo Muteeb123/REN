@@ -65,7 +65,7 @@ const Questionnaire = () => {
     const [answers, setAnswers] = useState({
         name: "",
         gender: "",
-        age: 28,
+        age: 18,
         goals: [],
         causes: [],
     });
