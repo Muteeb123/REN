@@ -2,9 +2,9 @@ import express from "express";
 import {
     createChat,
     sendMessage,
-    getChatId,
     getMessages,
-} from "../controllers/chat.controller.js";
+    getSeekersByProvider,
+} from "../controllers/Chat.controller.js";
 
 const router = express.Router();
 
@@ -16,12 +16,11 @@ router.post("/create", createChat);
 // POST /api/chat/:chatId/send
 router.post("/:chatId/send", sendMessage);
 
-// Get the chatId for a specific (helpSeeker, helpProvider) pair
-// GET /api/chat/find?helpSeekerUserId=...&helpProviderId=...
-router.get("/find", getChatId);
+// Get paginated messages using seeker and provider IDs directly
+// GET /api/chat/messages?helpSeekerUserId=...&helpProviderId=...&page=1
+router.get("/messages", getMessages);
 
-// Get paginated messages for a chat
-// GET /api/chat/:chatId/messages?page=1
-router.get("/:chatId/messages", getMessages);
+// GET /api/chat/seekers/:providerId
+router.get("/seekers/:providerId", getSeekersByProvider);
 
 export default router;

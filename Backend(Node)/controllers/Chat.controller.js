@@ -124,14 +124,17 @@ export const sendMessage = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET CHAT ID
-// Returns the chatId for a specific (helpSeeker, helpProvider) pair.
+// GET MESSAGES (paginated)
+// Finds the chat by (helpSeekerId, helpProviderId) pair and returns
+// paginated messages — no need to know the chatId upfront.
 //
-// GET /api/chat/find?helpSeekerUserId=...&helpProviderId=...
+// GET /api/chat/messages?helpSeekerUserId=...&helpProviderId=...&page=1
 // ─────────────────────────────────────────────────────────────────────────────
-export const getChatId = async (req, res) => {
+export const getMessages = async (req, res) => {
     try {
-        const { helpSeekerUserId, helpProviderId } = req.query;
+        const { helpSeekerUserId, helpProviderId, page: pageQuery } = req.query;
+        const page = Math.max(1, parseInt(pageQuery) || 1);
+        const PAGE_SIZE = 10;
 
         if (!helpSeekerUserId || !helpProviderId) {
             return res.status(400).json({
@@ -142,42 +145,10 @@ export const getChatId = async (req, res) => {
         const chat = await Chat.findOne({
             helpSeekerId: helpSeekerUserId,
             helpProviderId,
-        }).select("_id helpSeekerId helpProviderId createdAt");
+        }).select("messages helpSeekerId helpProviderId");
 
         if (!chat) {
             return res.status(404).json({ message: "No chat found for this pair" });
-        }
-
-        res.status(200).json({
-            chatId: chat._id,
-            helpSeekerId: chat.helpSeekerId,
-            helpProviderId: chat.helpProviderId,
-            createdAt: chat.createdAt,
-        });
-    } catch (error) {
-        console.error("Get Chat ID Error:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GET MESSAGES (paginated)
-// Fetches messages for a chat, 10 per page, most recent first.
-//
-// GET /api/chat/:chatId/messages?page=1
-// ─────────────────────────────────────────────────────────────────────────────
-export const getMessages = async (req, res) => {
-    try {
-        const { chatId } = req.params;
-        const page = Math.max(1, parseInt(req.query.page) || 1);
-        const PAGE_SIZE = 10;
-
-        const chat = await Chat.findById(chatId).select(
-            "messages helpSeekerId helpProviderId"
-        );
-
-        if (!chat) {
-            return res.status(404).json({ message: "Chat not found" });
         }
 
         const totalMessages = chat.messages.length;
@@ -197,7 +168,7 @@ export const getMessages = async (req, res) => {
             chatId: chat._id,
             helpSeekerId: chat.helpSeekerId,
             helpProviderId: chat.helpProviderId,
-            messages ,
+            messages,
             pagination: {
                 currentPage: page,
                 totalPages,
@@ -207,6 +178,32 @@ export const getMessages = async (req, res) => {
         });
     } catch (error) {
         console.error("Get Messages Error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// GET /api/chat/seekers/:providerId
+export const getSeekersByProvider = async (req, res) => {
+    try {
+        const { providerId } = req.params;
+
+        const chats = await Chat.find({ helpProviderId: providerId })
+            .populate("helpSeekerId", "name preferredName email")
+            .select("helpSeekerId createdAt");
+
+        if (!chats.length) {
+            return res.status(404).json({ message: "No seekers found for this provider" });
+        }
+
+        const seekers = chats.map((chat) => ({
+            chatId: chat._id,
+            seeker: chat.helpSeekerId, // populated with name, preferredName, email
+            chatStartedAt: chat.createdAt,
+        }));
+
+        res.status(200).json({ seekers });
+    } catch (error) {
+        console.error("Get Seekers By Provider Error:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
