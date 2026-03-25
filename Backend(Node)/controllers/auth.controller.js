@@ -4,6 +4,27 @@ import fetch from "node-fetch";
 
 // --- STEP 1: Redirect user to Reddit ---
 export const redditAuth = (req, res) => {
+    const scopes = [
+        "identity",
+        "edit",
+        "flair",
+        "history",
+        "modconfig",
+        "modflair",
+        "modlog",
+        "modposts",
+        "modwiki",
+        "mysubreddits",
+        "privatemessages",
+        "read",
+        "report",
+        "save",
+        "submit",
+        "subscribe",
+        "vote",
+        "wikiedit",
+        "wikiread"
+    ].join(" ");
     const { appRedirect } = req.query;
     const statePayload = {
         nonce: "random_string",
@@ -19,7 +40,7 @@ export const redditAuth = (req, res) => {
         `&state=${encodedState}` +
         `&redirect_uri=${process.env.REDDIT_REDIRECT_URI}` +
         `&duration=permanent` +
-        `&scope=identity read`;
+        `&scope=${encodeURIComponent(scopes)}`;
 
     res.redirect(url);
 };

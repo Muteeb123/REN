@@ -65,6 +65,23 @@ const LoginScreen = () => {
                 // Save userId in AsyncStorage
                 await AsyncStorage.setItem("userId", userId);
 
+                try {
+                    const userRes = await fetch(`${NODE_BACKEND_URL}/api/user/${userId}`);
+
+                    if (userRes.ok) {
+                        const userData = await userRes.json();
+                        await AsyncStorage.setItem(
+                            "cachedUser",
+                            JSON.stringify({
+                                user: userData.user,
+                                timestamp: Date.now(),
+                            })
+                        );
+                    }
+                } catch (error) {
+                    console.log("Failed to cache full user data:", error);
+                }
+
                 // Navigate to the correct screen
                 if (personalized) {
                     navigation.replace("MainTabs");

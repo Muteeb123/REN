@@ -1,5 +1,5 @@
 import { analyzeText, analyzeUserRedditContent } from "../services/sentiment.service.js";
-import { fetchAuthenticatedUserContent } from "../services/reddit.service.js"; 
+import { fetchAuthenticatedUserContent } from "../services/reddit.service.js";
 import User from "../Models/User.model.js";
 
 export const testSentiment = async (req, res) => {
@@ -22,6 +22,7 @@ export const analyzeUserSentiment = async (req, res) => {
 };
 
 export const fetchRedditData = async (req, res) => {
+  console.log("Received request to fetch reddit data for user:", req.params.userId);
   try {
     const { userId } = req.params;
 
