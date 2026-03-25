@@ -4,3 +4,5 @@ motor
 python-dotenv
 google-genai
 pydantic
+transformers
+torch

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.conversationRoutes import router as conversationRouter
 from dotenv import load_dotenv
 import uvicorn
+from routes.sentimentRoutes import router as sentimentRouter
 
 load_dotenv()  # Load GEMINI_API_KEY from .env
 
@@ -23,7 +24,12 @@ app.add_middleware(
 # Register routes
 app.include_router(geminiRouter, prefix="/api")
 app.include_router(conversationRouter, prefix="/api")
+app.include_router(sentimentRouter)  # exposes POST /analyze
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-    print("Server is running on http://localhost:8000")
+
+#command to run the server
+# uvicorn app:app --reload --host 0.0.0.0 --port 8000
+
+# if __name__ == "__main__":
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
+#     print("Server is running on http://localhost:8000")
