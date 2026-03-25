@@ -1,5 +1,6 @@
 import { analyzeText, analyzeUserRedditContent } from "../services/sentiment.service.js";
 import { fetchAuthenticatedUserContent } from "../services/reddit.service.js"; 
+import User from "../Models/User.model.js";
 
 export const testSentiment = async (req, res) => {
   try {
@@ -23,7 +24,12 @@ export const analyzeUserSentiment = async (req, res) => {
 export const fetchRedditData = async (req, res) => {
   try {
     const { userId } = req.params;
-    const result = await fetchAuthenticatedUserContent(userId);
+
+    const user = await User.findById(userId);
+    console.log("Fetched user for reddit data fetch:", user);
+    console.log("Fetched user token:", user.refreshToken);
+
+    const result = await fetchAuthenticatedUserContent({ refreshToken: user.token, userId });
     return res.json({ count: result.length, results: result });
   } catch (error) {
     return res.status(400).json({ message: error.message || "Failed to fetch user data from reddit" });
