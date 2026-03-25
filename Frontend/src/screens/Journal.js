@@ -14,8 +14,11 @@ import {
     Image,
     ActivityIndicator,
     Alert,
+    BackHandler,
+    useWindowDimensions,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HTML from "react-native-render-html";
 import {
@@ -32,6 +35,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NODE_BACKEND_URL } from "../config/urls";
+import Header from "../components/Header";
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -100,9 +104,11 @@ const colors = {
     inputBackground: "#F8F8F8",
     borderLight: "#E8E8E8",
 };
-export default function Journal() {
+export default function Journal({ currentScreen, onNavigate }) {
     const editorRef = useRef();
     const BASE_URL = `${NODE_BACKEND_URL}/api/journal`;
+    const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [view, setView] = useState("list");
     // Set the default mood to 'Neutral' upon initial load
     const [selectedMood, setSelectedMood] = useState(moods[5]);
@@ -110,7 +116,7 @@ export default function Journal() {
     const [title, setTitle] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editingEntry, setEditingEntry] = useState(null);
-    const navigation = useNavigation();
+
     const [entries, setEntries] = useState([
         {
             id: 1,
@@ -124,6 +130,77 @@ export default function Journal() {
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSave, setLoadingSave] = useState(false);
     const [loadingDeleteId, setLoadingDeleteId] = useState(null);
+
+    const normalizeNote = (value) => {
+        if (!value) return "";
+        return value
+            .replace(/<p><br><\/p>/gi, "")
+            .replace(/<br\s*\/?>/gi, "")
+            .replace(/<[^>]*>/g, "")
+            .trim();
+    };
+
+    const hasUnsavedChanges = () => {
+        if (view !== "new") return false;
+
+        const currentTitle = (title || "").trim();
+        const currentNote = normalizeNote(note);
+        const currentMood = selectedMood?.label || moods[5].label;
+
+        if (editingEntry) {
+            return (
+                currentTitle !== (editingEntry.title || "").trim() ||
+                currentNote !== normalizeNote(editingEntry.text || "") ||
+                currentMood !== (editingEntry.mood?.label || moods[5].label)
+            );
+        }
+
+        return (
+            currentTitle !== "Untitled" ||
+            currentNote !== "" ||
+            currentMood !== moods[5].label
+        );
+    };
+
+    useEffect(() => {
+        const onHardwareBack = () => {
+            if (view !== "new") {
+                return false;
+            }
+
+            if (hasUnsavedChanges()) {
+                Alert.alert(
+                    "Discard changes?",
+                    "You have unsaved journal changes. Do you want to discard them and go back to the list?",
+                    [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                            text: "Discard",
+                            style: "destructive",
+                            onPress: () => {
+                                setEditingEntry(null);
+                                setSelectedMood(moods[5]);
+                                setView("list");
+                            },
+                        },
+                    ]
+                );
+            } else {
+                setEditingEntry(null);
+                setSelectedMood(moods[5]);
+                setView("list");
+            }
+
+            return true;
+        };
+
+        const backSub = BackHandler.addEventListener(
+            "hardwareBackPress",
+            onHardwareBack
+        );
+
+        return () => backSub.remove();
+    }, [view, title, note, selectedMood, editingEntry]);
 
     useEffect(() => {
         const fetchEntries = async () => {
@@ -175,9 +252,9 @@ export default function Journal() {
                     body: JSON.stringify(payload),
                 });
                 const json = await response.json();
-                console.log("Update response:", json);
+
             } catch (error) {
-                console.error("Error updating journal entry:", error);
+
             }
 
             const updated = entries.map((item) =>
@@ -279,26 +356,34 @@ export default function Journal() {
         setView("new");
     };
 
+    const handleNavigateToScreen = (screenName) => {
+        setCurrentScreen(screenName);
+        navigation.navigate(screenName);
+    };
+
     if (view === "list") {
         return (
-            <SafeAreaView style={styles.safeContainer}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>My Journal</Text>
-                    <TouchableOpacity
-                        style={styles.headerButton}
-                        onPress={startNewEntry}
-                        disabled={loadingFetch}
-                    >
-                        <PlusIcon color="#fff" size={24} />
-                    </TouchableOpacity>
-                </View>
+            <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top }]}>
+                <Header
+                    title="Journals"
+                    titleAlignment="center"
+
+                    backgroundColor="#FFFFFF"
+                    borderBottomColor="rgba(82, 172, 215, 0.1)"
+                    rightIconSize={30}
+                    textSize={25}
+                />
 
                 {loadingFetch ? (
                     <View style={styles.centered}>
                         <ActivityIndicator size="large" />
                     </View>
                 ) : (
-                    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    <ScrollView
+                        style={styles.scrollViewContainer}
+                        contentContainerStyle={styles.scrollViewContent}
+                        showsVerticalScrollIndicator={false}
+                    >
                         {entries.map((entry) => (
                             <TouchableOpacity
                                 key={entry.id}
@@ -364,6 +449,14 @@ export default function Journal() {
                         ))}
                     </ScrollView>
                 )}
+
+                <TouchableOpacity
+                    style={styles.floatingAddButton}
+                    onPress={startNewEntry}
+                    activeOpacity={0.85}
+                >
+                    <Ionicons name="add" size={30} color="#FFFFFF" />
+                </TouchableOpacity>
             </SafeAreaView>
         );
     }
@@ -380,12 +473,31 @@ export default function Journal() {
                 style={styles.keyboardView}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-                <View style={styles.journalHeader}>
+                <View style={[styles.journalHeader, { paddingTop: insets.top - 5 }]}>
                     <TouchableOpacity
                         onPress={() => {
-                            setEditingEntry(null);
-                            setSelectedMood(moods[5]);
-                            setView("list");
+                            if (hasUnsavedChanges()) {
+                                Alert.alert(
+                                    "Discard changes?",
+                                    "You have unsaved journal changes. Do you want to discard them and go back to the list?",
+                                    [
+                                        { text: "Cancel", style: "cancel" },
+                                        {
+                                            text: "Discard",
+                                            style: "destructive",
+                                            onPress: () => {
+                                                setEditingEntry(null);
+                                                setSelectedMood(moods[5]);
+                                                setView("list");
+                                            },
+                                        },
+                                    ]
+                                );
+                            } else {
+                                setEditingEntry(null);
+                                setSelectedMood(moods[5]);
+                                setView("list");
+                            }
                         }}
                     >
                         <ArrowLeft color={selectedMood?.darkColor || "#000"} size={26} />
@@ -510,24 +622,38 @@ const styles = StyleSheet.create({
     safeContainer: {
         flex: 1,
         backgroundColor: "#F5F9F3",
-        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+
     },
 
     header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: moderateScale(16),
-        paddingVertical: moderateScale(12),
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-        backgroundColor: colors.primary,
+        display: "none",
     },
+    headerTitle: { display: "none" },
+    headerButton: { display: "none" },
 
-    headerTitle: { fontSize: 26, fontWeight: "500", color: "#222" },
-    headerButton: { backgroundColor: "#52ACD7", padding: 10, borderRadius: 50 },
-
-    scrollView: { padding: 16 },
+    scrollViewContainer: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        padding: 16,
+        paddingBottom: moderateScale(96),
+    },
+    floatingAddButton: {
+        position: "absolute",
+        right: moderateScale(20),
+        bottom: Platform.OS === "ios" ? verticalScale(24) : verticalScale(20),
+        width: moderateScale(58),
+        height: moderateScale(58),
+        borderRadius: moderateScale(29),
+        backgroundColor: colors.secondary,
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 6,
+    },
     entryCard: {
         borderLeftWidth: 3,
         borderRadius: 14,
@@ -561,6 +687,7 @@ const styles = StyleSheet.create({
     keyboardView: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
 
     journalHeader: {
+        paddingTop: 10,
         flexDirection: "row",
         alignItems: "center",
         marginBottom: 10,

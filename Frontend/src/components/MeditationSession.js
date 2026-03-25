@@ -8,9 +8,15 @@ import {
     Animated,
     SafeAreaView,
     Platform,
+    BackHandler,
+    Alert,
+    ScrollView,
+    ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { Pause, Play } from "lucide-react-native";
+import * as Speech from "expo-speech";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -58,94 +64,149 @@ export default function MeditationSession() {
     const [timeLeft, setTimeLeft] = useState(120);
     const [sessionActive, setSessionActive] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+    const [voices, setVoices] = useState([]);
+    const [selectedVoice, setSelectedVoice] = useState(null);
+    const [loadingVoices, setLoadingVoices] = useState(true);
 
     const scaleAnim = useRef(new Animated.Value(1)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const waveAnim = useRef(new Animated.Value(0)).current;
     const timerRef = useRef(null);
+    const scriptIndexRef = useRef(0);
+    const speechTimeoutRef = useRef(null);
+    const isSpeakingRef = useRef(false);
 
-    // Fade in animation
+    // Friendly persona names to assign to unique voices
+    const personaNames = [
+        "Sophia", "James", "Aria", "Ethan", "Luna",
+        "Oliver", "Maya", "Leo", "Zara", "Noah",
+        "Isla", "Kai", "Serene", "Aiden", "Clara",
+    ];
+
+    // Load available voices and deduplicate into unique personas
     useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-        }).start();
+        const loadVoices = async () => {
+            try {
+                const availableVoices = await Speech.getAvailableVoicesAsync();
+                const filteredVoices = availableVoices.filter(
+                    (v) => v.language && v.language.startsWith("en")
+                );
+
+                // Deduplicate: keep one voice per unique underlying name/engine
+                const seen = new Set();
+                const uniqueVoices = [];
+                for (const v of filteredVoices) {
+                    const key = v.name.replace(/[-_#\d]/g, "").toLowerCase().trim();
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueVoices.push(v);
+                    }
+                }
+
+                // Assign a friendly persona name to each unique voice
+                const personas = uniqueVoices.slice(0, personaNames.length).map((v, i) => ({
+                    ...v,
+                    persona: personaNames[i],
+                }));
+
+                setVoices(personas);
+                if (personas.length > 0) {
+                    setSelectedVoice(personas[0]);
+                }
+            } catch (e) {
+                // Fallback — no voice selection available
+            } finally {
+                setLoadingVoices(false);
+            }
+        };
+        loadVoices();
     }, []);
 
     // Breathing animation
     useEffect(() => {
         if (isBreathing && sessionActive && !isPaused) {
-            // Main breathing animation
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(scaleAnim, {
-                        toValue: 1.3,
-                        duration: 4000,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(scaleAnim, {
-                        toValue: 1,
-                        duration: 4000,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-
-            // Subtle pulse animation
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(pulseAnim, {
-                        toValue: 1.1,
-                        duration: 2000,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseAnim, {
-                        toValue: 1,
-                        duration: 2000,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-
-            // Wave animation for the audio line
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(waveAnim, {
-                        toValue: 1,
-                        duration: 2000,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(waveAnim, {
-                        toValue: 0,
-                        duration: 2000,
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-        } else {
-            scaleAnim.stopAnimation();
-            pulseAnim.stopAnimation();
-            waveAnim.stopAnimation();
-            Animated.parallel([
+            // Main breathing animation - continues from current value
+            const breathingSequence = Animated.sequence([
+                Animated.timing(scaleAnim, {
+                    toValue: 1.3,
+                    duration: 4000,
+                    useNativeDriver: true,
+                }),
                 Animated.timing(scaleAnim, {
                     toValue: 1,
-                    duration: 300,
+                    duration: 4000,
+                    useNativeDriver: true,
+                }),
+            ]);
+
+            // Loop the breathing sequence
+            const runBreathing = () => {
+                breathingSequence.start(({ finished }) => {
+                    if (finished && isBreathing && sessionActive && !isPaused) {
+                        runBreathing();
+                    }
+                });
+            };
+            runBreathing();
+
+            // Subtle pulse animation
+            const pulseSequence = Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.1,
+                    duration: 2000,
                     useNativeDriver: true,
                 }),
                 Animated.timing(pulseAnim, {
                     toValue: 1,
-                    duration: 300,
+                    duration: 2000,
+                    useNativeDriver: true,
+                }),
+            ]);
+
+            const runPulse = () => {
+                pulseSequence.start(({ finished }) => {
+                    if (finished && isBreathing && sessionActive && !isPaused) {
+                        runPulse();
+                    }
+                });
+            };
+            runPulse();
+
+            // Wave animation
+            const waveSequence = Animated.sequence([
+                Animated.timing(waveAnim, {
+                    toValue: 1,
+                    duration: 2000,
                     useNativeDriver: true,
                 }),
                 Animated.timing(waveAnim, {
                     toValue: 0,
-                    duration: 300,
+                    duration: 2000,
                     useNativeDriver: true,
                 }),
-            ]).start();
+            ]);
+
+            const runWave = () => {
+                waveSequence.start(({ finished }) => {
+                    if (finished && isBreathing && sessionActive && !isPaused) {
+                        runWave();
+                    }
+                });
+            };
+            runWave();
+        } else if (isPaused) {
+            // When paused, freeze animations at current value
+            scaleAnim.stopAnimation();
+            pulseAnim.stopAnimation();
+            waveAnim.stopAnimation();
         }
+
+        // Cleanup
+        return () => {
+            scaleAnim.stopAnimation();
+            pulseAnim.stopAnimation();
+            waveAnim.stopAnimation();
+        };
     }, [isBreathing, sessionActive, isPaused]);
 
     // Timer effect
@@ -167,7 +228,94 @@ export default function MeditationSession() {
         return () => clearInterval(timerRef.current);
     }, [sessionActive, isPaused, timeLeft]);
 
+    // Script speech effect
+    useEffect(() => {
+        const script = session?.script;
+        if (!script || script.length === 0) return;
+
+        if (sessionActive && !isPaused && !isSpeakingRef.current) {
+            const speakNext = () => {
+                const index = scriptIndexRef.current;
+                if (index >= script.length || !sessionActive) return;
+
+                isSpeakingRef.current = true;
+                Speech.speak(script[index], {
+                    language: selectedVoice?.language || "en-US",
+                    ...(selectedVoice ? { voice: selectedVoice.identifier } : {}),
+                    rate: 0.85,
+                    pitch: 1.0,
+                    onDone: () => {
+                        isSpeakingRef.current = false;
+                        scriptIndexRef.current = index + 1;
+                        if (scriptIndexRef.current < script.length) {
+                            // Pause between lines for breathing space
+                            speechTimeoutRef.current = setTimeout(speakNext, 3000);
+                        }
+                    },
+                    onStopped: () => {
+                        isSpeakingRef.current = false;
+                    },
+                    onError: () => {
+                        isSpeakingRef.current = false;
+                    },
+                });
+            };
+
+            speakNext();
+        }
+
+        return () => {
+            clearTimeout(speechTimeoutRef.current);
+        };
+    }, [sessionActive, isPaused, selectedVoice]);
+
+    // Cleanup speech on unmount
+    useEffect(() => {
+        return () => {
+            Speech.stop();
+            clearTimeout(speechTimeoutRef.current);
+        };
+    }, []);
+
+    // Handle hardware back button
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            () => {
+                if (sessionActive) {
+                    // Show confirmation dialog if session is active
+                    Alert.alert(
+                        "Leave Meditation?",
+                        "Are you sure you want to stop your meditation session?",
+                        [
+                            {
+                                text: "Cancel",
+                                onPress: () => null,
+                                style: "cancel"
+                            },
+                            {
+                                text: "Leave",
+                                onPress: () => {
+                                    handleSessionComplete();
+                                },
+                                style: "destructive"
+                            }
+                        ]
+                    );
+                    return true; // Prevent default back behavior
+                } else {
+                    // Allow default back behavior when session is not active
+                    return false;
+                }
+            }
+        );
+
+        return () => backHandler.remove();
+    }, [sessionActive]);
+
     const startSession = () => {
+        scriptIndexRef.current = 0;
+        isSpeakingRef.current = false;
         setSessionActive(true);
         setIsBreathing(true);
         setIsPaused(false);
@@ -176,6 +324,9 @@ export default function MeditationSession() {
     };
 
     const pauseSession = () => {
+        Speech.stop();
+        clearTimeout(speechTimeoutRef.current);
+        isSpeakingRef.current = false;
         setIsPaused(true);
         setIsBreathing(false);
     };
@@ -186,8 +337,12 @@ export default function MeditationSession() {
     };
 
     const resetSession = () => {
-        setIsPaused(false);
-        setIsBreathing(true);
+        Speech.stop();
+        clearTimeout(speechTimeoutRef.current);
+        isSpeakingRef.current = false;
+        scriptIndexRef.current = 0;
+        setIsPaused(true);
+        setIsBreathing(false);
         const durationInSeconds = selectedDuration * 60;
         setTimeLeft(durationInSeconds);
         scaleAnim.stopAnimation();
@@ -196,6 +351,10 @@ export default function MeditationSession() {
     };
 
     const handleSessionComplete = () => {
+        Speech.stop();
+        clearTimeout(speechTimeoutRef.current);
+        isSpeakingRef.current = false;
+        scriptIndexRef.current = 0;
         setSessionActive(false);
         setIsBreathing(false);
         setIsPaused(false);
@@ -224,41 +383,13 @@ export default function MeditationSession() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
-                {/* Session Info - Only show when session is not active */}
-                {!sessionActive && (
-                    <Animated.View
-                        style={[
-                            styles.sessionInfo,
-                            {
-                                opacity: fadeAnim,
-                                transform: [{
-                                    translateY: fadeAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [30, 0],
-                                    }),
-                                }],
-                            }
-                        ]}
-                    >
-                        <Text style={styles.sessionTitle}>{sessionTitle}</Text>
-                    </Animated.View>
-                )}
+                {/* Session Info */}
+                <View style={styles.sessionInfo}>
+                    <Text style={styles.sessionTitle}>{sessionTitle}</Text>
+                </View>
 
                 {/* Breathing Circle */}
-                <Animated.View
-                    style={[
-                        styles.breathingContainer,
-                        {
-                            opacity: fadeAnim,
-                            transform: [{
-                                translateY: fadeAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [30, 0],
-                                }),
-                            }],
-                        }
-                    ]}
-                >
+                <View style={styles.breathingContainer}>
                     <View style={styles.breathingCircleContainer}>
                         {/* Outer glow effect */}
                         <Animated.View
@@ -266,7 +397,7 @@ export default function MeditationSession() {
                                 styles.breathingGlow,
                                 {
                                     transform: [{ scale: pulseAnim }],
-                                    opacity: isBreathing ? 0.2 : 0,
+                                    opacity: sessionActive ? 0.2 : 0,
                                 }
                             ]}
                         />
@@ -277,57 +408,55 @@ export default function MeditationSession() {
                                 styles.breathingCircle,
                                 {
                                     transform: [{ scale: scaleAnim }],
-                                    backgroundColor: isBreathing ? colors.secondary : colors.accent,
+                                    backgroundColor: sessionActive ? colors.secondary : colors.accent,
                                 },
                             ]}
                         />
 
                         {/* Inner circle with timer */}
-                        <Animated.View
-                            style={[
-                                styles.breathingCircleInner,
-                                {
-                                    transform: [{ scale: pulseAnim }],
-                                }
-                            ]}
+                        {sessionActive ? (<TouchableOpacity
+                            style={styles.breathingCircleInner}
+                            onPress={isPaused ? resumeSession : pauseSession}
                         >
-                            {sessionActive ? (
-                                <View style={styles.timerContainer}>
-                                    <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
-                                    <Text style={styles.timerLabel}>
-                                        {isPaused ? "PAUSED" : "REMAINING"}
-                                    </Text>
-                                </View>
-                            ) : (
-                                <View style={styles.readyContainer}>
+
+                            <View style={styles.timerContainer}
+
+                            >
+                                <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+                                <Text style={styles.timerLabel}>
+                                    {isPaused ? "PAUSED" : "REMAINING"}
+                                </Text>
+                            </View>
+
+
+
+                        </TouchableOpacity>) : (
+                            <TouchableOpacity
+                                style={styles.breathingCircleInner}
+                                onPress={startSession}
+                            >
+                                <View style={styles.readyContainer}
+
+
+                                >
                                     <Ionicons
                                         name="play"
                                         size={moderateScale(40)}
                                         color={colors.secondary}
+                                        paddingLeft={moderateScale(4)}
                                     />
                                     <Text style={styles.readyText}>Ready</Text>
-                                </View>
-                            )}
-                        </Animated.View>
-                    </View>
-                </Animated.View>
 
-                {/* Duration Selection - Only show when session is not active */}
+                                </View>
+                            </TouchableOpacity>
+                        )
+                        }
+                    </View>
+                </View>
+
+                {/* Duration & Voice Selection - Only show when session is not active */}
                 {!sessionActive && (
-                    <Animated.View
-                        style={[
-                            styles.durationSection,
-                            {
-                                opacity: fadeAnim,
-                                transform: [{
-                                    translateY: fadeAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [30, 0],
-                                    }),
-                                }],
-                            }
-                        ]}
-                    >
+                    <View style={styles.durationSection}>
                         <Text style={styles.durationTitle}>Select Duration</Text>
                         <View style={styles.durationGrid}>
                             {durationOptions.map((duration) => (
@@ -354,24 +483,56 @@ export default function MeditationSession() {
                                 </TouchableOpacity>
                             ))}
                         </View>
-                    </Animated.View>
+
+                        {/* Voice Selection */}
+                        <Text style={[styles.durationTitle, { marginTop: verticalScale(20) }]}>Select Voice</Text>
+                        {loadingVoices ? (
+                            <ActivityIndicator size="small" color={colors.secondary} />
+                        ) : voices.length > 0 ? (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.voiceList}
+                            >
+                                {voices.map((voice) => (
+                                    <TouchableOpacity
+                                        key={voice.identifier}
+                                        style={[
+                                            styles.voiceButton,
+                                            selectedVoice?.identifier === voice.identifier && styles.voiceButtonSelected,
+                                        ]}
+                                        onPress={() => {
+                                            setSelectedVoice(voice);
+                                            Speech.stop();
+                                            Speech.speak(`Hi, I'm ${voice.persona}. Let's begin.`, {
+                                                voice: voice.identifier,
+                                                language: voice.language,
+                                                rate: 0.9,
+                                                pitch: 1.0,
+                                            });
+                                        }}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.voiceName,
+                                                selectedVoice?.identifier === voice.identifier && styles.voiceNameSelected,
+                                            ]}
+                                            numberOfLines={1}
+                                        >
+                                            {voice.persona}
+                                        </Text>
+
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        ) : (
+                            <Text style={styles.noVoicesText}>Using default voice</Text>
+                        )}
+                    </View>
                 )}
 
                 {/* Control Buttons - Positioned at bottom */}
-                <Animated.View
-                    style={[
-                        styles.controls,
-                        {
-                            opacity: fadeAnim,
-                            transform: [{
-                                translateY: fadeAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [30, 0],
-                                }),
-                            }],
-                        }
-                    ]}
-                >
+                <View style={styles.controls}>
                     {!sessionActive ? (
                         <TouchableOpacity
                             style={[
@@ -393,8 +554,7 @@ export default function MeditationSession() {
                         <View style={styles.sessionControls}>
                             {/* Reset Button */}
                             <TouchableOpacity style={[styles.controlButton, styles.resetButton]} onPress={resetSession}>
-                                <Ionicons name="refresh" size={moderateScale(18)} color={colors.textDark} />
-                                <Text style={[styles.controlButtonText, styles.resetButtonText]}>Reset</Text>
+                                <Ionicons name="refresh" size={moderateScale(24)} color={colors.secondary} />
                             </TouchableOpacity>
 
                             {/* Pause/Resume Button (Primary) */}
@@ -402,24 +562,24 @@ export default function MeditationSession() {
                                 style={[styles.controlButton, styles.pauseButton]}
                                 onPress={isPaused ? resumeSession : pauseSession}
                             >
-                                <Ionicons
-                                    name={isPaused ? "play" : "pause"}
-                                    size={moderateScale(20)}
-                                    color={colors.primary}
-                                />
-                                <Text style={[styles.controlButtonText, styles.pauseButtonText]}>
-                                    {isPaused ? "Resume" : "Pause"}
-                                </Text>
+                                {isPaused ? (
+                                    <Play
+
+                                        size={moderateScale(40)}
+                                        color={colors.secondary}
+                                        fill={colors.primary}
+                                        style={{ paddingLeft: isPaused ? moderateScale(4) : 0 }}
+                                    />
+                                ) : <Pause size={moderateScale(40)} color={colors.secondary} fill={colors.primary} />}
                             </TouchableOpacity>
 
                             {/* Stop Button */}
                             <TouchableOpacity style={[styles.controlButton, styles.stopButton]} onPress={handleSessionComplete}>
-                                <Ionicons name="stop" size={moderateScale(18)} color={"#D64545"} />
-                                <Text style={[styles.controlButtonText, styles.stopButtonText]}>End</Text>
+                                <Ionicons name="stop" size={moderateScale(24)} color={colors.secondary} />
                             </TouchableOpacity>
                         </View>
                     )}
-                </Animated.View>
+                </View>
             </View>
         </SafeAreaView>
     );
@@ -445,7 +605,7 @@ const styles = StyleSheet.create({
     },
     sessionTitle: {
         fontSize: moderateScale(24),
-        fontWeight: "700",
+
         color: colors.textDark,
         textAlign: "center",
         marginBottom: verticalScale(8),
@@ -651,7 +811,7 @@ const styles = StyleSheet.create({
     startButtonText: {
         color: colors.primary,
         fontSize: moderateScale(16),
-        fontWeight: "700",
+        fontWeight: "400",
         marginRight: moderateScale(8),
     },
     startButtonIcon: {
@@ -659,68 +819,76 @@ const styles = StyleSheet.create({
     },
     sessionControls: {
         flexDirection: "row",
-        justifyContent: "space-around",
-        alignItems: "center",
+        justifyContent: "center",
+        alignItems: "flex-end",
         width: "100%",
         marginTop: verticalScale(10),
-        gap: moderateScale(10),
+        paddingHorizontal: moderateScale(20),
     },
     controlButton: {
-        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        paddingVertical: verticalScale(10),
-        borderRadius: moderateScale(30),
-        flex: 1,
+        borderRadius: "50%",
         backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.shadow,
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.15,
-                shadowRadius: 6,
-            },
-            android: {
-                elevation: 3,
-            },
-        }),
+        marginBottom: verticalScale(60),
     },
     resetButton: {
+        width: moderateScale(70),
+        height: moderateScale(70),
         backgroundColor: "#F3F6F4",
+        marginRight: moderateScale(20),
+
     },
     pauseButton: {
+        width: moderateScale(100),
+        height: moderateScale(100),
         backgroundColor: colors.secondary,
-        flex: 1.4,
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.secondary,
-                shadowOffset: { width: 0, height: 5 },
-                shadowOpacity: 0.25,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 5,
-            },
-        }),
+        marginHorizontal: moderateScale(10),
+        marginBottom: verticalScale(80),
     },
     stopButton: {
+        width: moderateScale(70),
+        height: moderateScale(70),
         backgroundColor: "#F3F6F4",
+        marginLeft: moderateScale(20),
     },
-    controlButtonText: {
+    voiceList: {
+        paddingHorizontal: moderateScale(4),
+        gap: moderateScale(10),
+    },
+    voiceButton: {
+        backgroundColor: colors.bubbleLight,
+        paddingVertical: verticalScale(10),
+        paddingHorizontal: moderateScale(16),
+        borderRadius: moderateScale(12),
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: "transparent",
+        minWidth: moderateScale(100),
+    },
+    voiceButtonSelected: {
+        backgroundColor: colors.secondary,
+        borderColor: colors.secondary,
+    },
+    voiceName: {
         fontSize: moderateScale(13),
         fontWeight: "600",
-        marginLeft: moderateScale(6),
-    },
-    pauseButtonText: {
-        color: colors.primary,
-    },
-    resetButtonText: {
         color: colors.textDark,
     },
-    stopButtonText: {
-        color: "#D64545",
-        fontWeight: "700",
+    voiceNameSelected: {
+        color: colors.primary,
+    },
+    voiceLanguage: {
+        fontSize: moderateScale(11),
+        color: colors.textLight,
+        marginTop: verticalScale(2),
+    },
+    voiceLanguageSelected: {
+        color: "rgba(255,255,255,0.7)",
+    },
+    noVoicesText: {
+        fontSize: moderateScale(13),
+        color: colors.textLight,
+        textAlign: "center",
     },
 });

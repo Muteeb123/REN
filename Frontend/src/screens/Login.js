@@ -17,16 +17,13 @@ import {
     REDDIT_AUTH_ENDPOINT,
     REDDIT_TOKEN_ENDPOINT,
     REDIRECT_URI,
+    REDDIT_CLIENT_ID,
+
 } from "../config/urls";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const REDDIT_CLIENT_ID = "UJrTPUb0qwYTcKXFcJX93A";
-const BACKEND_LOGIN_URL = `${NODE_BACKEND_URL}/api/auth/login`;
 const BACKEND_SIGNUP_URL = `${NODE_BACKEND_URL}/api/auth/signup`;
-console.log("Backend Login URL:", BACKEND_LOGIN_URL);
-console.log("Backend Signup URL:", BACKEND_SIGNUP_URL);
-console.log("Redirect URI being used:", REDIRECT_URI);
 
 const discovery = {
     authorizationEndpoint: REDDIT_AUTH_ENDPOINT,
@@ -40,19 +37,13 @@ const colors = {
     buttonText: "#FFFFFF",
 };
 
-// Base64 for Reddit Basic Auth
-const base64Encode = (str) => {
-    if (typeof btoa === "function") return btoa(str);
-    console.error("btoa not available.");
-    return str;
-};
+
 
 const LoginScreen = () => {
     const navigation = useNavigation();
     const [isLoading, setIsLoading] = useState(false);
-    const [authMode, setAuthMode] = useState("login");
 
-    const [request, response, promptAsync] = useAuthRequest(
+    const [, response, promptAsync] = useAuthRequest(
         {
             clientId: REDDIT_CLIENT_ID,
             redirectUri: REDIRECT_URI,
@@ -66,7 +57,7 @@ const LoginScreen = () => {
     const exchangeCodeForToken = async (code) => {
         setIsLoading(true);
 
-        const basicAuth = base64Encode(`${REDDIT_CLIENT_ID}:`);
+        const basicAuth = typeof btoa === "function" ? btoa(`${REDDIT_CLIENT_ID}:`) : `${REDDIT_CLIENT_ID}:`;
         const formData = new URLSearchParams();
         formData.append("grant_type", "authorization_code");
         formData.append("code", code);
@@ -83,7 +74,7 @@ const LoginScreen = () => {
             });
 
             const tokenData = await res.json();
-            console.log("Token Response:", tokenData);
+
 
             if (res.ok && tokenData.access_token) {
                 await fetchRedditProfileAndSend(tokenData);
@@ -91,8 +82,7 @@ const LoginScreen = () => {
                 alert(tokenData.error_description || "Failed to get Reddit token.");
             }
         } catch (err) {
-            console.error("❌ Token exchange error:", err);
-            alert("Network error during token exchange.");
+
         } finally {
             setIsLoading(false);
         }
@@ -101,8 +91,6 @@ const LoginScreen = () => {
     // Fetch Reddit profile → send to backend
     const fetchRedditProfileAndSend = async (tokenData) => {
 
-
-        console.log("Fetching Reddit profile with access token.");
         try {
             const profileRes = await fetch(REDDIT_API_ME, {
                 headers: {
@@ -112,7 +100,6 @@ const LoginScreen = () => {
             });
 
             const profile = await profileRes.json();
-            console.log("Reddit Profile:", profile);
 
             if (!profile?.name) {
                 alert("Failed to fetch Reddit profile username.");
@@ -127,93 +114,114 @@ const LoginScreen = () => {
                 age: null,
             };
 
-            const endpoint =
-                authMode === "signup" ? BACKEND_SIGNUP_URL : BACKEND_LOGIN_URL;
 
-            console.log("Sending payload to backend:", payload);
-
-            const backendRes = await fetch(endpoint, {
+            const backendRes = await fetch(BACKEND_SIGNUP_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
 
             const backendData = await backendRes.json();
-            console.log("Backend Response:", backendData);
-
             if (backendRes.ok) {
                 // Save user ID globally
                 await AsyncStorage.setItem("userId", backendData.user._id);
 
-                if (authMode === "login") {
+                // Cache user data with timestamp (1 minute validity)
+                await AsyncStorage.setItem(
+                    "cachedUser",
+                    JSON.stringify({
+                        user: backendData.user,
+                        timestamp: Date.now(),
+                    })
+                );
+
+                // Check if user is personalized
+                if (backendData.user.personalized) {
                     navigation.replace("MainTabs");
                 } else {
                     navigation.replace("Personalization");
                 }
             } else {
-                alert(backendData.message || `Backend ${authMode} failed.`);
+                alert(backendData.message || "Backend authentication failed.");
             }
         } catch (err) {
-            console.error("❌ Error sending data to backend:", err);
             alert("Error sending data to backend.");
         }
     };
+
+    // Check for cached user data on mount
+    useEffect(() => {
+        const checkCachedUser = async () => {
+            try {
+                const cachedData = await AsyncStorage.getItem("cachedUser");
+                if (cachedData) {
+                    const { user, timestamp } = JSON.parse(cachedData);
+                    const now = Date.now();
+                    const oneMonth = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+                    // Check if cache is still valid (within 1 month)
+                    if (now - timestamp < oneMonth) {
+                        await AsyncStorage.setItem("userId", user._id);
+
+                        // Navigate based on personalization status
+                        if (user.personalized) {
+                            navigation.replace("MainTabs");
+                        } else {
+                            navigation.replace("Personalization");
+                        }
+                        return;
+                    } else {
+                        // Cache expired, remove it
+                        await AsyncStorage.removeItem("cachedUser");
+                    }
+                }
+            } catch (err) {
+            }
+        };
+
+        checkCachedUser();
+    }, [navigation]);
 
     // Listen for OAuth response
     useEffect(() => {
         if (response?.type === "success") {
             const { code } = response.params;
-            console.log("Authorization code received:", code);
             exchangeCodeForToken(code);
         } else if (response?.type === "dismiss") {
             setIsLoading(false);
         } else if (response?.type === "error") {
-            console.error("Auth error:", response.params);
             setIsLoading(false);
         }
     }, [response]);
 
-    const handleAuth = async (mode) => {
-        setAuthMode(mode);
+    const handleAuth = async () => {
         setIsLoading(true);
 
         try {
             await promptAsync();
         } catch (err) {
-            console.error(`❌ ${mode} start error:`, err);
             setIsLoading(false);
         }
     };
 
     return (
-        console.log("Rendering Login Screen", BACKEND_LOGIN_URL) || <View style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.centerContent}>
                 <Image source={require("../../assets/logo.png")} style={styles.logo} />
-                <Text style={styles.heading}>Let's get stasdsadsdsadsarted</Text>
+                <Text style={styles.heading}>Let's get started</Text>
                 <Text style={styles.subheading}>Log in or sign up using Reddit</Text>
 
                 {isLoading ? (
                     <ActivityIndicator size="large" color={colors.primary} />
                 ) : (
-                    <>
-                        <TouchableOpacity
-                            style={styles.pbutton}
-                            onPress={() => handleAuth("login")}
-                        >
-                            <Text style={[styles.buttonText, { color: colors.buttonText }]}>
-                                Login with Reddit
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.sbutton}
-                            onPress={() => handleAuth("signup")}
-                        >
-                            <Text style={[styles.buttonText, { color: colors.primary }]}>
-                                Signup with Reddit
-                            </Text>
-                        </TouchableOpacity>
-                    </>
+                    <TouchableOpacity
+                        style={styles.pbutton}
+                        onPress={() => handleAuth()}
+                    >
+                        <Text style={[styles.buttonText, { color: colors.buttonText }]}>
+                            Get Started With Reddit
+                        </Text>
+                    </TouchableOpacity>
                 )}
             </View>
         </View>
@@ -227,7 +235,6 @@ const styles = StyleSheet.create({
     heading: { fontSize: 26, fontWeight: "bold", marginBottom: 8, color: colors.secondary, textAlign: "center" },
     subheading: { fontSize: 16, color: "#666", marginBottom: 25, textAlign: "center" },
     pbutton: { width: "90%", paddingVertical: 14, borderRadius: 25, alignItems: "center", marginVertical: 8, backgroundColor: colors.primary },
-    sbutton: { width: "90%", paddingVertical: 14, borderRadius: 25, alignItems: "center", marginVertical: 8, backgroundColor: "transparent", borderWidth: 2, borderColor: colors.primary },
     buttonText: { fontSize: 16, fontWeight: "600" },
 });
 

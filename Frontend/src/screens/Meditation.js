@@ -10,9 +10,12 @@ import {
     Dimensions,
     Platform,
     Image,
+    useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Header from "../components/Header";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -66,6 +69,16 @@ const meditationData = {
         title: "Intro to Meditation",
         duration: "8 mins",
         categories: ["All", "Mindfulness", "Stress Reduction"],
+        script: [
+            "Welcome to your first meditation. Find a comfortable position and gently close your eyes.",
+            "Take a deep breath in through your nose, and slowly exhale through your mouth.",
+            "Let your shoulders drop and release any tension you are holding.",
+            "Notice the rhythm of your breathing. There is no need to change it, just observe.",
+            "With each breath, allow yourself to settle deeper into stillness.",
+            "If your mind wanders, that is perfectly okay. Gently guide your attention back to your breath.",
+            "You are doing beautifully. Stay here in this calm space for a moment.",
+            "When you are ready, slowly open your eyes. Carry this peace with you.",
+        ],
     },
     categories: [
         {
@@ -77,18 +90,55 @@ const meditationData = {
                     title: "Calm Focus",
                     duration: "10 mins",
                     image: images.calm_focus,
+                    script: [
+                        "Welcome to Calm Focus. Sit comfortably and let your hands rest on your lap.",
+                        "Close your eyes and take three deep breaths. In through the nose, out through the mouth.",
+                        "Now bring your attention to the space between your eyebrows. This is your center of focus.",
+                        "Imagine a soft, warm light glowing at that point. Let it grow brighter with each breath.",
+                        "If thoughts arise, simply acknowledge them and let them drift away like clouds.",
+                        "Return your attention to the warm light. Feel it radiating calm energy through your mind.",
+                        "With each exhale, release distractions. With each inhale, draw in clarity.",
+                        "You are focused. You are calm. You are present.",
+                        "Take one more deep breath and gently open your eyes when you are ready.",
+                    ],
                 },
                 {
                     id: "2",
                     title: "Severe Breath",
                     duration: "20 mins",
                     image: images.severe_breath,
+                    script: [
+                        "Welcome to Severe Breath. This session will deepen your connection with your breathing.",
+                        "Sit tall with your spine straight. Place one hand on your chest and one on your belly.",
+                        "Breathe in deeply for four counts. One, two, three, four.",
+                        "Hold your breath gently for four counts. One, two, three, four.",
+                        "Now exhale slowly for six counts. One, two, three, four, five, six.",
+                        "Repeat this pattern. Inhale for four, hold for four, exhale for six.",
+                        "Feel the air filling your lungs completely. Notice your belly expanding.",
+                        "As you exhale, feel your body releasing tension from every muscle.",
+                        "Continue this rhythm. Let each cycle bring you deeper into relaxation.",
+                        "Your breath is your anchor. It is always here for you.",
+                        "Take one final deep breath. Hold it. And release completely.",
+                    ],
                 },
                 {
                     id: "3",
                     title: "Inner Pet",
                     duration: "35 mins",
                     image: images.inner_pet,
+                    script: [
+                        "Welcome to Inner Pet. This is a journey inward to connect with your inner peace.",
+                        "Close your eyes and imagine yourself in a quiet, sunlit meadow.",
+                        "The grass is soft beneath you. A gentle breeze carries the scent of wildflowers.",
+                        "In the distance, you see a gentle animal approaching you. It could be any creature that brings you comfort.",
+                        "Watch as it comes closer. It sits beside you, calm and trusting.",
+                        "Reach out and feel its warmth. This creature represents your inner compassion.",
+                        "Sit together in silence. Feel the unconditional acceptance it offers you.",
+                        "Whatever burdens you carry, you can set them down here in this meadow.",
+                        "Breathe deeply and feel the peace radiating from this connection.",
+                        "When you are ready, thank your companion and slowly return to the present moment.",
+                        "Open your eyes gently, carrying this warmth and compassion with you.",
+                    ],
                 },
             ],
         },
@@ -101,26 +151,65 @@ const meditationData = {
                     title: "Stress Relief",
                     duration: "15 mins",
                     image: images.stress_relief,
+                    script: [
+                        "Welcome to Stress Relief. Let us release the weight you have been carrying.",
+                        "Find a comfortable position. Close your eyes and take a slow, deep breath.",
+                        "Scan your body from head to toe. Notice where you hold tension.",
+                        "Starting with your forehead, consciously relax those muscles. Let them soften.",
+                        "Move to your jaw. Unclench it. Let your mouth relax slightly open.",
+                        "Drop your shoulders away from your ears. Feel the tension melting away.",
+                        "Relax your hands. Unclench your fists. Let your fingers rest gently.",
+                        "Now breathe into any remaining tight spots. Send warmth and relief there.",
+                        "With each exhale, imagine stress leaving your body as dark smoke dissolving into light.",
+                        "You are safe. You are supported. You can let go.",
+                    ],
                 },
                 {
                     id: "5",
                     title: "Deep Relax",
                     duration: "20 mins",
                     image: images.deep_relax,
+                    script: [
+                        "Welcome to Deep Relax. Allow yourself to completely surrender to this moment.",
+                        "Lie down or sit in the most comfortable position you can find.",
+                        "Close your eyes. Take three slow, deep breaths.",
+                        "Feel your body becoming heavy, sinking into the surface beneath you.",
+                        "Starting with your toes, send a wave of relaxation upward through your body.",
+                        "Feel it moving through your feet, your ankles, your calves.",
+                        "The warm wave rises through your knees, your thighs, your hips.",
+                        "It flows through your belly, your chest, softening everything it touches.",
+                        "The relaxation spreads through your arms, your neck, your face.",
+                        "Your entire body is now deeply relaxed. You are floating in calm.",
+                        "Rest here. There is nothing to do, nowhere to be. Just breathe and be.",
+                    ],
                 },
                 {
                     id: "6",
                     title: "Calm Rein",
                     duration: "35 mins",
                     image: images.calm_rein,
+                    script: [
+                        "Welcome to Calm Rein. This session will help you regain control over your inner world.",
+                        "Sit comfortably and close your eyes. Take a moment to arrive fully in this space.",
+                        "Breathe in deeply and whisper to yourself: I am in control.",
+                        "Imagine you are holding the reins of a gentle horse. This horse is your mind.",
+                        "Sometimes it races ahead. Sometimes it wanders off the path.",
+                        "But you hold the reins with steady, gentle hands. You guide it back with patience.",
+                        "Breathe in calm. Breathe out chaos. You are the rider, not the storm.",
+                        "Feel the rhythm of your breathing becoming steady like hoofbeats on soft earth.",
+                        "With each breath, you are more centered, more grounded, more at peace.",
+                        "You have the power to choose calm. You always have.",
+                        "Take a deep breath and open your eyes. You are in control.",
+                    ],
                 },
             ],
         },
     ],
 };
 
-export default function Meditation() {
+export default function Meditation({ currentScreen, onNavigate }) {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [selectedCategory, setSelectedCategory] = useState("All");
 
     // Calculate dynamic dimensions based on screen size
@@ -131,7 +220,7 @@ export default function Meditation() {
     const handleNavigateToSession = (session) => {
         navigation.navigate("MeditationSession", {
             session,
-            durationOptions: [5, 8, 10, 15],
+            durationOptions: [1, 2, 5, 10],
         });
     };
 
@@ -209,40 +298,31 @@ export default function Meditation() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.headerButton}
-                >
-                    <Ionicons
-                        name="arrow-back"
-                        size={moderateScale(22)}
-                        color={colors.textDark}
-                    />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Meditations</Text>
-                <TouchableOpacity style={styles.headerButton}>
-                    <Ionicons
-                        name="search-outline"
-                        size={moderateScale(22)}
-                        color={colors.textDark}
-                    />
-                </TouchableOpacity>
-            </View>
+
+        <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+            <Header
+                title="Meditations"
+                titleAlignment="center"
+                showLeftIcon={false}
+                showRightIcon={true}
+                rightIconName="search-outline"
+
+                backgroundColor="#FFFFFF"
+                borderBottomColor="rgba(82, 172, 215, 0.1)"
+                rightIconSize={32}
+            />
 
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Featured Meditation */}
-                <TouchableOpacity
+                <View
                     style={[
                         styles.featuredCard,
                         { height: featuredCardHeight }
                     ]}
-                    onPress={() => handleNavigateToSession(meditationData.featured)}
+
                 >
                     <View style={styles.featuredContent}>
                         <Text style={styles.featuredTitle}>
@@ -252,14 +332,11 @@ export default function Meditation() {
                             {meditationData.featured.duration}
                         </Text>
 
-                        <FlatList
-                            data={meditationData.featured.categories}
-                            renderItem={renderCategoryPill}
-                            keyExtractor={(item) => item}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.categoriesList}
-                        />
+                        <View style={styles.featuredDividerRow}>
+                            <View style={[styles.featuredDividerPart, styles.featuredDividerSmall, styles.featuredDividerBlue]} />
+                            <View style={[styles.featuredDividerPart, styles.featuredDividerMedium, styles.featuredDividerWhite]} />
+                            <View style={[styles.featuredDividerPart, styles.featuredDividerLarge, styles.featuredDividerWhite]} />
+                        </View>
 
                         <TouchableOpacity
                             style={styles.startButton}
@@ -274,7 +351,7 @@ export default function Meditation() {
                             />
                         </TouchableOpacity>
                     </View>
-                </TouchableOpacity>
+                </View>
 
                 {/* Category Sections */}
                 <FlatList
@@ -292,35 +369,14 @@ export default function Meditation() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
-        marginTop: 30
+        backgroundColor: colors.background
     },
     scrollContainer: {
         paddingBottom: verticalScale(40),
     },
-    header: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingHorizontal: moderateScale(20),
-        paddingVertical: moderateScale(12),
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-        backgroundColor: colors.primary,
-    },
-    headerButton: {
-        padding: moderateScale(8),
-        minWidth: moderateScale(44),
-        minHeight: moderateScale(44),
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    headerTitle: {
-        fontSize: getFontSize(20),
-        fontWeight: "700",
-        color: colors.textDark,
-        textAlign: "center",
-    },
+    header: { display: "none" },
+    headerButton: { display: "none" },
+    headerTitle: { display: "none" },
 
     // Featured Card
     featuredCard: {
@@ -357,6 +413,32 @@ const styles = StyleSheet.create({
         fontSize: getFontSize(14),
         color: colors.textDark,
         marginBottom: verticalScale(12)
+    },
+    featuredDividerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        height: scale(5),
+        marginBottom: verticalScale(2),
+        gap: moderateScale(4),
+    },
+    featuredDividerPart: {
+        height: scale(12),
+        borderRadius: scale(8),
+    },
+    featuredDividerSmall: {
+        flex: 1.5,
+    },
+    featuredDividerMedium: {
+        flex: 2.5,
+    },
+    featuredDividerLarge: {
+        flex: 3,
+    },
+    featuredDividerBlue: {
+        backgroundColor: colors.secondary,
+    },
+    featuredDividerWhite: {
+        backgroundColor: colors.primary,
     },
 
     categoriesContainer: {

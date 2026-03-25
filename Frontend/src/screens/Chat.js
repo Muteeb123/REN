@@ -13,6 +13,7 @@ import {
     ActivityIndicator,
     Image,
     Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +25,7 @@ import { useNavigation } from "@react-navigation/native";
 // local asset
 import BotIcon from "../../assets/logo.png";
 import { PYTHON_BACKEND_URL } from "../config/urls";
+import Header from "../components/Header";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -42,6 +44,53 @@ const colors = {
     borderLight: "#E8E8E8",
 };
 
+// ======== Date Helpers ========
+const getDateKey = (dateStr) => {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+};
+
+const getDateLabel = (dateKey) => {
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, "0")}-${today.getDate().toString().padStart(2, "0")}`;
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = `${yesterday.getFullYear()}-${(yesterday.getMonth() + 1).toString().padStart(2, "0")}-${yesterday.getDate().toString().padStart(2, "0")}`;
+    if (dateKey === todayKey) return "Today";
+    if (dateKey === yesterdayKey) return "Yesterday";
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const [y, m, d] = dateKey.split("-");
+    return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}, ${y}`;
+};
+
+const addDateSeparators = (messages) => {
+    const result = [];
+    let lastDateKey = null;
+    for (const msg of messages) {
+        if (!msg.rawDate) { result.push(msg); continue; }
+        const dateKey = getDateKey(msg.rawDate);
+        if (dateKey !== lastDateKey) {
+            if (lastDateKey !== null) {
+                result.push({ id: `sep-${lastDateKey}`, type: "separator", label: getDateLabel(lastDateKey) });
+            }
+            lastDateKey = dateKey;
+        }
+        result.push(msg);
+    }
+    if (lastDateKey !== null) {
+        result.push({ id: `sep-${lastDateKey}`, type: "separator", label: getDateLabel(lastDateKey) });
+    }
+    return result;
+};
+
+const DateSeparator = ({ label }) => (
+    <View style={styles.dateSeparatorContainer}>
+        <View style={styles.dateSeparatorLine} />
+        <Text style={styles.dateSeparatorText}>{label}</Text>
+        <View style={styles.dateSeparatorLine} />
+    </View>
+);
+
 // ======== Typing Indicator ========
 const TypingIndicator = ({ size = 22 }) => (
     <View style={[styles.messageBubble, styles.botBubble, { flexDirection: "row", alignItems: "center" }]}>
@@ -55,7 +104,7 @@ const TypingIndicator = ({ size = 22 }) => (
 );
 
 // ======== Message Bubble ========
-const MessageBubble = React.memo(({ text, isUser, animatedValue }) => {
+const MessageBubble = React.memo(({ text, isUser, animatedValue, timestamp }) => {
     const bubbleStyle = isUser ? styles.userBubble : styles.botBubble;
     const textStyle = isUser ? styles.userText : styles.botText;
 
@@ -73,12 +122,15 @@ const MessageBubble = React.memo(({ text, isUser, animatedValue }) => {
     return (
         <Animated.View style={[styles.messageBubble, bubbleStyle, animStyle]}>
             <Text style={[styles.messageText, textStyle]}>{text}</Text>
+            {timestamp && (
+                <Text style={[styles.timestampText, isUser && styles.timestampUser]}>{timestamp}</Text>
+            )}
         </Animated.View>
     );
 });
 
 // ======== Main ChatPage ========
-export default function ChatPage() {
+export default function ChatPage({ currentScreen, onNavigate }) {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const base_url = PYTHON_BACKEND_URL;
@@ -106,7 +158,12 @@ export default function ChatPage() {
             const data = await res.json();
 
             if (data?.success && Array.isArray(data.messages)) {
-                const mapped = data.messages.map((m) => ({ id: uuid.v4(), text: m.content, sender: m.role }));
+                const mapped = data.messages.map((m) => {
+                    const raw = m.created_at || new Date().toISOString();
+                    const d = new Date(raw);
+                    let h = d.getHours(); const min = d.getMinutes().toString().padStart(2, "0"); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12;
+                    return { id: uuid.v4(), text: m.content, sender: m.role, rawDate: raw, timestamp: `${h}:${min} ${ap}` };
+                });
                 setMessages((prev) => [...prev, ...mapped]);
                 setPage(pageNumber);
                 setHasMore(!!(data.pagination && data.pagination.has_next_page));
@@ -122,7 +179,8 @@ export default function ChatPage() {
         const trimmed = input.trim();
         if (!trimmed) return;
 
-        const userMessage = { id: uuid.v4(), text: trimmed, sender: "user" };
+        const now = new Date();
+        const userMessage = { id: uuid.v4(), text: trimmed, sender: "user", rawDate: now.toISOString(), timestamp: formatTimestamp(now) };
         setMessages((prev) => [userMessage, ...prev]);
         setInput("");
 
@@ -138,12 +196,12 @@ export default function ChatPage() {
             });
             const data = await res.json();
 
-            const botMessage = { id: uuid.v4(), text: data?.reply ?? "Sorry, I didn't understand that.", sender: "model" };
+            const botMessage = { id: uuid.v4(), text: data?.reply ?? "Sorry, I didn't understand that.", sender: "model", rawDate: new Date().toISOString(), timestamp: formatTimestamp(new Date()) };
             setMessages((prev) => [botMessage, ...prev]);
         } catch (err) {
             console.error("sendMessage error", err);
             setMessages((prev) => [
-                { id: uuid.v4(), text: "Failed to get a response. Please try again.", sender: "model" },
+                { id: uuid.v4(), text: "Failed to get a response. Please try again.", sender: "model", rawDate: new Date().toISOString(), timestamp: formatTimestamp(new Date()) },
                 ...prev,
             ]);
         } finally {
@@ -151,31 +209,42 @@ export default function ChatPage() {
         }
     }, [input]);
 
-    const renderItem = ({ item }) => {
-        if (item.typing) return <TypingIndicator />;
-        const isUser = item.sender === "user";
-        return <MessageBubble text={item.text} isUser={isUser} animatedValue={fadeAnim} />;
+    const formatTimestamp = (date) => {
+        let hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, "0");
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12 || 12;
+        return `${hours}:${minutes} ${ampm}`;
     };
 
-    const dataForList = botTyping ? [{ id: "typing-indicator", typing: true }, ...messages] : messages;
+    const renderItem = ({ item }) => {
+        if (item.type === "separator") return <DateSeparator label={item.label} />;
+        if (item.typing) return <TypingIndicator />;
+        const isUser = item.sender === "user";
+        return <MessageBubble text={item.text} isUser={isUser} animatedValue={fadeAnim} timestamp={item.timestamp} />;
+    };
+
+    const baseList = botTyping ? [{ id: "typing-indicator", typing: true }, ...messages] : messages;
+    const dataForList = addDateSeparators(baseList);
 
     return (
-        <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top }]}>
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.headerButton}>
-                    <Ionicons name="arrow-back" size={scale(22)} color={colors.textDark} />
-                </TouchableOpacity>
+            <Header
+                title="Chat with REN"
+                titleAlignment="center"
+                subtitleText={botTyping ? "Typing..." : "Online"}
+                subtitleColor="#52ACD7"
+                showLeftIcon={false}
+                leftIconName="arrow-back"
+                onLeftIconPress={() => { }}
 
-                <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Chat with REN</Text>
-                    <Text style={styles.headerSubtitle}>{botTyping ? "Typing..." : "Online"}</Text>
-                </View>
 
-                <TouchableOpacity style={styles.headerButton} onPress={() => navigation.replace("Login")}>
-                    <Ionicons name="settings-outline" size={scale(22)} color={colors.textDark} />
-                </TouchableOpacity>
-            </View>
+                backgroundColor="#FFFFFF"
+                borderBottomColor="rgba(82, 172, 215, 0.1)"
+
+                textSize={21}
+            />
 
             {/* Chat Area */}
             <KeyboardAvoidingView
@@ -228,17 +297,22 @@ export default function ChatPage() {
 const styles = StyleSheet.create({
     safeContainer: { flex: 1, backgroundColor: "#F5F9F3" },
     flex: { flex: 1 },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: moderateScale(16), paddingVertical: moderateScale(12), borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.primary },
-    headerButton: { padding: moderateScale(4) },
-    headerTitleContainer: { alignItems: "center" },
-    headerTitle: { fontSize: moderateScale(18), fontWeight: "500", color: colors.textDark },
-    headerSubtitle: { fontSize: moderateScale(13), color: colors.secondary, marginTop: moderateScale(2) },
+    header: { display: "none" },
+    headerButton: { display: "none" },
+    headerTitleContainer: { display: "none" },
+    headerTitle: { display: "none" },
+    headerSubtitle: { display: "none" },
     messageBubble: { maxWidth: "80%", paddingHorizontal: moderateScale(16), paddingVertical: moderateScale(10), borderRadius: moderateScale(20), marginBottom: moderateScale(10) },
     userBubble: { backgroundColor: colors.secondary, alignSelf: "flex-end", borderBottomRightRadius: moderateScale(6) },
     botBubble: { backgroundColor: colors.bubbleLight, alignSelf: "flex-start", borderBottomLeftRadius: moderateScale(6) },
     messageText: { fontSize: moderateScale(15), paddingTop: moderateScale(2), lineHeight: moderateScale(20) },
     userText: { color: "white", fontWeight: "500" },
     botText: { color: colors.textDark },
+    timestampText: { fontSize: moderateScale(11), color: colors.textLight, marginTop: moderateScale(4), textAlign: "right" },
+    timestampUser: { color: "rgba(255,255,255,0.7)" },
+    dateSeparatorContainer: { flexDirection: "row", alignItems: "center", marginVertical: moderateScale(12), paddingHorizontal: moderateScale(16) },
+    dateSeparatorLine: { flex: 1, height: 1, backgroundColor: colors.borderLight },
+    dateSeparatorText: { fontSize: moderateScale(12), color: colors.textLight, fontWeight: "500", paddingHorizontal: moderateScale(10) },
     inputContainer: {
         flexDirection: "row", alignItems: "flex-end", paddingHorizontal: moderateScale(10), borderTopWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.inputBackground,
         paddingVertical: verticalScale(8),

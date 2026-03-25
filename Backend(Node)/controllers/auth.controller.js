@@ -1,7 +1,12 @@
 // src/controllers/auth.controller.js
 import User from "../Models/User.model.js";
 
-// --- SIGNUP: store Reddit user (create if not exists) ---
+// --- SIGNUP: Unified auth endpoint (create if not exists, or return existing user) ---
+// This endpoint handles both login and signup flows:
+// - New users: Created with personalized = false, redirected to Personalization page
+// - Existing users: Returned with their personalized status
+//   - If personalized = true: Redirected to MainTabs
+//   - If personalized = false: Redirected to Personalization page
 export const signup = async (req, res) => {
     try {
         const { email, token, name, age, refreshToken } = req.body;
@@ -15,12 +20,12 @@ export const signup = async (req, res) => {
 
         if (existingUser) {
             return res.status(200).json({
-                message: "User already exists (logged in)",
+                message: "User already exists",
                 user: existingUser,
             });
         }
 
-        // Create a new user
+        // Create a new user (personalized defaults to false)
         const newUser = await User.create({
             email,
             token,
@@ -39,9 +44,10 @@ export const signup = async (req, res) => {
     }
 };
 
-// --- LOGIN: find Reddit user using email ---
+// --- LOGIN: Deprecated - Use signup endpoint instead (handles both login and signup) ---
+// Kept for backward compatibility
 export const login = async (req, res) => {
-    console.log("Login request received:", req.body);
+
     try {
         const { email } = req.body;
 
@@ -60,7 +66,7 @@ export const login = async (req, res) => {
             user,
         });
     } catch (error) {
-        console.error("Login Error:", error);
+
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
