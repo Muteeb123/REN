@@ -6,6 +6,9 @@ import authRoutes from "./routes/auth.routes.js";
 import journalRoutes from "./routes/journal.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import sentimentRoutes from "./routes/sentiment.routes.js";
+import helpProviderRoutes from "./routes/Helpprovider.routes.js";
+
+
 
 dotenv.config();
 connectDB();
@@ -20,5 +23,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/journal", journalRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/sentiment", sentimentRoutes);
+app.use("/api/help-provider", helpProviderRoutes);
 
 export default app;

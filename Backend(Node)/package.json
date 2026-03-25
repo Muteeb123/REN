@@ -18,7 +18,10 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "mongoose": "^8.19.2",
-    "snoowrap": "^1.23.0"
+    "snoowrap": "^1.23.0",
+    "bcryptjs": "^3.0.3",
+    "googleapis": "^171.4.0",
+    "nodemailer": "^8.0.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
