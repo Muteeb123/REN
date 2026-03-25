@@ -40,9 +40,13 @@ export const redditAuth = (req, res) => {
         `&state=${encodedState}` +
         `&redirect_uri=${process.env.REDDIT_REDIRECT_URI}` +
         `&duration=permanent` +
-        `&scope=${encodeURIComponent(scopes)}`;
+        `&scope=identity edit flair history modconfig modflair modlog modposts modwiki mysubreddits privatemessages read report save submit subscribe vote wikiedit wikiread`;
 
-    res.redirect(url);
+
+
+    return res.redirect(url);
+
+    //return res.status(400).send(process.env.REDDIT_REDIRECT_URI);
 };
 
 // --- STEP 2: Reddit redirects here ---
