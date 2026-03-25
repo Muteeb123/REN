@@ -7,7 +7,7 @@ import journalRoutes from "./routes/journal.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import sentimentRoutes from "./routes/sentiment.routes.js";
 import helpProviderRoutes from "./routes/Helpprovider.routes.js";
-
+import chatRoutes from "./routes/Chat.routes.js";
 
 
 dotenv.config();
@@ -24,5 +24,6 @@ app.use("/api/journal", journalRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/sentiment", sentimentRoutes);
 app.use("/api/help-provider", helpProviderRoutes);
+app.use("/api/chat", chatRoutes);
 
 export default app;
