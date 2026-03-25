@@ -1,4 +1,3 @@
-// src/Models/HelpProvider.model.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -15,22 +14,24 @@ const helpProviderSchema = new mongoose.Schema(
         password: {
             type: String,
             required: [true, "Password is required"],
-            minlength: 6,
         },
 
         name: {
             type: String,
+            required: false,
             trim: true,
         },
 
-        // The InviteCode document _id this provider used to link up.
-        // Null until the provider enters a valid code.
-        // Use this to populate the InviteCode (which holds helpSeekerId) when needed.
-        inviteCodeId: {
+        // Reference to the help_seeker (User) who invited this provider
+        invitedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "InviteCode",
-            default: null,
-            get: (v) => v.toString()
+            ref: "User",
+            required: true,
+        },
+
+        isActive: {
+            type: Boolean,
+            default: true,
         },
     },
     {
@@ -39,16 +40,19 @@ const helpProviderSchema = new mongoose.Schema(
     }
 );
 
+helpProviderSchema.index({ email: 1 }, { unique: true, background: true });
+
 // Hash password before saving
 helpProviderSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
-    this.password = await bcrypt.hash(this.password, 10);
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
 });
 
-// Helper method to compare passwords on login
-helpProviderSchema.methods.comparePassword = async function (plainText) {
-    return bcrypt.compare(plainText, this.password);
+// Compare entered password with stored hash
+helpProviderSchema.methods.matchPassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
 };
 
 const HelpProvider = mongoose.model("HelpProvider", helpProviderSchema);

@@ -74,7 +74,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Helpful index on email for fast lookups (unique is already an index, but ensuring)
-userSchema.index({ email: 1 }, { unique: true, background: true });
+//userSchema.index({ email: 1 }, { unique: true, background: true });
 
 const User = mongoose.model("User", userSchema);
 export default User;
