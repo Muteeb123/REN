@@ -112,7 +112,7 @@ export const redditCallback = async (req, res) => {
         const email = `${profile.name}@gmail.com`;
 
         // 🔹 Find or create user
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ name: profile.name });
 
         if (!user) {
             user = await User.create({
