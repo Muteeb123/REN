@@ -23,7 +23,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/journal", journalRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/sentiment", sentimentRoutes);
-app.use("/api/help-provider", helpProviderRoutes);
+app.use("/api/helpprovider", helpProviderRoutes);
 app.use("/api/chat", chatRoutes);
 
 export default app;

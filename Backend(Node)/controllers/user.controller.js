@@ -27,18 +27,41 @@ export const personalize = async (req, res) => {
             return res.status(400).json({ message: "User ID is required" });
         }
 
+        const updatePayload = {
+            personalized: true,
+        };
+
+        if (Object.prototype.hasOwnProperty.call(req.body, "name")) {
+            updatePayload.preferredName = name && name.trim() ? name.trim() : undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(req.body, "gender")) {
+            updatePayload.gender = gender || undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(req.body, "age")) {
+            updatePayload.age = age || undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(req.body, "goals")) {
+            updatePayload.goals = goals || undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(req.body, "causes")) {
+            updatePayload.causes = causes || undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(req.body, "helpContactEmail")) {
+            updatePayload.helpContactEmail =
+                helpContactEmail && helpContactEmail.trim()
+                    ? helpContactEmail.trim()
+                    : undefined;
+        }
+
         // Find and update the user
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            {
-                preferredName: name || undefined,
-                gender: gender || undefined,
-                age: age || undefined,
-                goals: goals || undefined,
-                causes: causes || undefined,
-                helpContactEmail: helpContactEmail || undefined,
-                personalized: true,
-            },
+            updatePayload,
             { new: true, runValidators: true }
         );
 

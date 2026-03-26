@@ -7,3 +7,5 @@ __pycache__/
 Frontend/node_modules/
 Frontend/build/
 Frontend/config/urls.js
+
+Backend(Node)/node_modules/

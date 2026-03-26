@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../components/Header";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Edit, Icon, Pencil } from "lucide-react-native";
+import { Pencil, Trash2 } from "lucide-react-native";
 import { NODE_BACKEND_URL } from "../config/urls";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -100,6 +100,33 @@ export default function Settings() {
             console.error("Settings save name error:", error);
         }
     };
+
+    const inviteHelpProvider = async (email) => {
+        const userId = await AsyncStorage.getItem("userId");
+        if (!userId) {
+            throw new Error("User ID not found");
+        }
+
+        const response = await fetch(`${NODE_BACKEND_URL}/api/helpprovider/invite`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                helpSeekerUserId: userId,
+                email,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data?.message || "Failed to invite help provider");
+        }
+
+        return data;
+    };
+
     const updateUserProfile = async (updates) => {
         try {
             const userId = await AsyncStorage.getItem("userId");
@@ -128,12 +155,25 @@ export default function Settings() {
             const cachedUser = await AsyncStorage.getItem("cachedUser");
             if (cachedUser) {
                 const parsed = JSON.parse(cachedUser);
+                const nextUser = {
+                    ...parsed.user,
+                    ...data.user,
+                };
+
+                if (Object.prototype.hasOwnProperty.call(updates, "name") && !updates.name?.trim()) {
+                    delete nextUser.preferredName;
+                }
+
+                if (
+                    Object.prototype.hasOwnProperty.call(updates, "helpContactEmail") &&
+                    !updates.helpContactEmail?.trim()
+                ) {
+                    delete nextUser.helpContactEmail;
+                }
+
                 const updated = {
                     ...parsed,
-                    user: {
-                        ...parsed.user,
-                        ...data.user,
-                    },
+                    user: nextUser,
                 };
                 await AsyncStorage.setItem("cachedUser", JSON.stringify(updated));
             }
@@ -206,8 +246,16 @@ export default function Settings() {
                 // Also save to AsyncStorage for backward compatibility
                 await AsyncStorage.setItem("helpContactEmail", trimmedEmail);
                 ToastAndroid.show("Help contact email updated successfully", ToastAndroid.SHORT);
+
+                if (trimmedEmail !== prevEmail) {
+                    try {
+                        await inviteHelpProvider(trimmedEmail);
+                    } catch (inviteError) {
+                        ToastAndroid.show(inviteError.message || "Email saved, but invite failed.", ToastAndroid.SHORT);
+                    }
+                }
             } catch (error) {
-                ToastAndroid.show("Failed to update help contact email. Please try again.", ToastAndroid.SHORT);
+                ToastAndroid.show(error.message || "Failed to update help contact email. Please try again.", ToastAndroid.SHORT);
                 setHelpEmail(prevEmail); // Revert on error
             }
             return;
@@ -246,6 +294,49 @@ export default function Settings() {
     const isValidEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
+    };
+
+    const handleRemoveName = () => {
+        Alert.alert("Remove Name", "Do you want to remove your preferred name?", [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: "Remove",
+                style: "destructive",
+                onPress: async () => {
+                    try {
+                        await updateUserProfile({ name: "" });
+                        setName("");
+                        setPrevName("");
+                        setIsEditingName(false);
+                        ToastAndroid.show("Name removed", ToastAndroid.SHORT);
+                    } catch (error) {
+                        ToastAndroid.show("Failed to remove name", ToastAndroid.SHORT);
+                    }
+                },
+            },
+        ]);
+    };
+
+    const handleRemoveHelpEmail = () => {
+        Alert.alert("Remove Help Email", "Do you want to remove help contact email?", [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: "Remove",
+                style: "destructive",
+                onPress: async () => {
+                    try {
+                        await updateUserProfile({ helpContactEmail: "" });
+                        await AsyncStorage.removeItem("helpContactEmail");
+                        setHelpEmail("");
+                        setPrevEmail("");
+                        setIsEditingEmail(false);
+                        ToastAndroid.show("Help contact email removed", ToastAndroid.SHORT);
+                    } catch (error) {
+                        ToastAndroid.show("Failed to remove help contact email", ToastAndroid.SHORT);
+                    }
+                },
+            },
+        ]);
     };
 
     const handleLogout = async () => {
@@ -349,6 +440,13 @@ export default function Settings() {
                                 }
 
                             </TouchableOpacity >
+                            <TouchableOpacity
+                                onPress={handleRemoveName}
+                                style={styles.iconButton}
+                                accessibilityLabel="Remove name"
+                            >
+                                <Trash2 size={scale(18)} color={colors.dangerText} />
+                            </TouchableOpacity>
                         </View >
                     </View >
 
@@ -382,6 +480,13 @@ export default function Settings() {
                                 }
 
                             </TouchableOpacity >
+                            <TouchableOpacity
+                                onPress={handleRemoveHelpEmail}
+                                style={styles.iconButton}
+                                accessibilityLabel="Remove help contact"
+                            >
+                                <Trash2 size={scale(18)} color={colors.dangerText} />
+                            </TouchableOpacity>
                         </View >
                     </View >
                 </View >

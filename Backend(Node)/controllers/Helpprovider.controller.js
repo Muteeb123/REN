@@ -18,7 +18,7 @@ import { sendHelpProviderCredentials } from "../utils/emailService.js";
 // ─────────────────────────────────────────────────────────────────────────────
 export const inviteHelpProvider = async (req, res) => {
     try {
-        const { helpSeekerUserId, email, name } = req.body;
+        const { helpSeekerUserId, email } = req.body;
 
         if (!helpSeekerUserId || !email) {
             return res.status(400).json({
@@ -43,10 +43,10 @@ export const inviteHelpProvider = async (req, res) => {
 
         // Make sure this email isn't already registered as a User or HelpProvider
         const emailLower = email.toLowerCase();
-        const existingUser = await User.findOne({ email: emailLower });
+
         const existingProvider = await HelpProvider.findOne({ email: emailLower });
 
-        if (existingUser || existingProvider) {
+        if (existingProvider) {
             return res.status(409).json({
                 message: "A user with this email already exists",
             });
@@ -57,7 +57,6 @@ export const inviteHelpProvider = async (req, res) => {
 
         const helpProvider = await HelpProvider.create({
             email: emailLower,
-            name: name || undefined,
             password: plainPassword,
             invitedBy: helpSeekerUserId,
         });
@@ -118,6 +117,7 @@ export const helpProviderLogin = async (req, res) => {
                 name: provider.name,
                 email: provider.email,
                 invitedBy: provider.invitedBy,
+                passwordChanged: provider.passwordChanged,
             },
         });
     } catch (error) {
@@ -125,3 +125,65 @@ export const helpProviderLogin = async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE PASSWORD FOR HELP PROVIDER
+// Updates password on first login (when passwordChanged is false).
+//
+// POST /api/auth/update-password
+// Body: { userId, newPassword }
+//
+// Flow:
+//   1. Validate userId and newPassword are provided
+//   2. Find HelpProvider by userId
+//   3. Validate password strength (min 6 characters)
+//   4. Update password and set passwordChanged to true
+//   5. Return success
+// ─────────────────────────────────────────────────────────────────────────────
+export const updatePassword = async (req, res) => {
+    try {
+        const { userId, newPassword } = req.body;
+
+        if (!userId || !newPassword) {
+            return res.status(400).json({
+                message: "userId and newPassword are required",
+            });
+        }
+
+        // Validate password strength
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters long",
+            });
+        }
+
+        // Find the help provider
+        const helpProvider = await HelpProvider.findById(userId);
+
+        if (!helpProvider) {
+            return res.status(404).json({
+                message: "Help provider not found",
+            });
+        }
+
+        // Update password (will be auto-hashed by pre-save hook)
+        helpProvider.password = newPassword;
+        helpProvider.passwordChanged = true;
+
+        await helpProvider.save();
+
+        res.status(200).json({
+            message: "Password updated successfully",
+            helpProvider: {
+                id: helpProvider._id,
+                name: helpProvider.name,
+                email: helpProvider.email,
+                passwordChanged: helpProvider.passwordChanged,
+            },
+        });
+    } catch (error) {
+        console.error("Update Password Error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
