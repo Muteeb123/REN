@@ -12,7 +12,7 @@ import RedditContent from "../Models/RedditContent.model.js";
 export const fetchAuthenticatedUserContent = async ({
   refreshToken,
   userId,
-  limit = 50,
+  limit = process.env.REDDIT_FETCH_LIMIT || 20,
 }) => {
   if (!refreshToken) throw new Error("refreshToken is required");
   if (!userId) throw new Error("userId is required");
@@ -26,10 +26,12 @@ export const fetchAuthenticatedUserContent = async ({
 
   reddit.config({ requestDelay: 1000, continueAfterRatelimitError: true });
 
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 50;
+
   const me = await reddit.getMe();
   const [comments, posts] = await Promise.all([
-    me.getComments({ limit }),
-    me.getSubmissions({ limit }),
+    me.getComments({ limit: safeLimit }),
+    me.getSubmissions({ limit: safeLimit }),
   ]);
 
   const docs = [];
