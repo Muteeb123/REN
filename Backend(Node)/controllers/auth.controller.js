@@ -6,24 +6,7 @@ import fetch from "node-fetch";
 export const redditAuth = (req, res) => {
     const scopes = [
         "identity",
-        "edit",
-        "flair",
         "history",
-        "modconfig",
-        "modflair",
-        "modlog",
-        "modposts",
-        "modwiki",
-        "mysubreddits",
-        "privatemessages",
-        "read",
-        "report",
-        "save",
-        "submit",
-        "subscribe",
-        "vote",
-        "wikiedit",
-        "wikiread"
     ].join(" ");
 
     const { appRedirect } = req.query;
@@ -32,11 +15,9 @@ export const redditAuth = (req, res) => {
         nonce: "random_string",
         appRedirect: typeof appRedirect === "string" ? appRedirect : null,
     };
+    const encodedState = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
-    const encodedState = Buffer.from(
-        JSON.stringify(statePayload)
-    ).toString("base64url");
-
+    
     console.log("Initiating Reddit Auth...");
     console.log("Reddirect URI:", process.env.REDDIT_REDIRECT_URI);
     const url =
@@ -150,6 +131,7 @@ export const redditCallback = async (req, res) => {
             `userId=${encodeURIComponent(user._id.toString())}` +
             `&personalized=${encodeURIComponent(String(user.personalized))}`;
 
+        console.log("Redirecting user to:", redirectUrl);
         return res.redirect(redirectUrl);
 
     } catch (error) {

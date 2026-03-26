@@ -1,6 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import journalRoutes from "./routes/journal.routes.js";
@@ -8,10 +10,14 @@ import userRoutes from "./routes/user.routes.js";
 import sentimentRoutes from "./routes/sentiment.routes.js";
 import helpProviderRoutes from "./routes/Helpprovider.routes.js";
 import chatRoutes from "./routes/Chat.routes.js";
+import pipelineRoutes from "./routes/pipeline.routes.js";   // ← NEW
+import { initCronJobs } from "./cron.js";
 
 
-dotenv.config();
-connectDB();
+// Connect DB, then start cron jobs
+connectDB().then(() => {
+  initCronJobs();  // safe to start after DB is ready
+});
 
 const app = express();
 
@@ -25,5 +31,6 @@ app.use("/api/user", userRoutes);
 app.use("/api/sentiment", sentimentRoutes);
 app.use("/api/helpprovider", helpProviderRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/pipeline", pipelineRoutes);
 
 export default app;
