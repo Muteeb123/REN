@@ -103,6 +103,7 @@ export const redditCallback = async (req, res) => {
         );
 
         const profile = await profileRes.json();
+        const avatar = profile.snoovatar_img || profile.icon_img || null;
 
         if (!profile?.name) {
             return res.status(400).send("Failed to fetch profile");
@@ -118,6 +119,7 @@ export const redditCallback = async (req, res) => {
                 email,
                 name: profile.name,
                 token: tokenData.access_token,
+                avatar,
                 refreshToken: tokenData.refresh_token,
                 age: null,
             });

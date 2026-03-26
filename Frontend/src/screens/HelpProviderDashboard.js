@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     Dimensions,
     Alert,
+    Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Header";
@@ -31,14 +32,23 @@ const colors = {
 };
 
 const HARD_CODED_HELP_SEEKERS = [
-    { id: "hs-1", name: "AK" },
-    { id: "hs-2", name: "AR" },
-    { id: "hs-3", name: "SA" },
-    { id: "hs-4", name: "UT" },
+    { id: "hs-1", name: "Midind", image: require("../../assets/Happy.png") },
+    { id: "hs-2", name: "adjiqin", image: require("../../assets/Anxious.png") },
+    { id: "hs-3", name: "idiajdin", image: require("../../assets/Neutral.png") },
+    { id: "hs-4", name: "sadjida", image: require("../../assets/Sad.png") },
 ];
 
 export default function HelpProviderDashboard({ navigation }) {
     const insets = useSafeAreaInsets();
+
+    // Helper function to chunk array into groups of 2
+    const chunkArray = (array, size) => {
+        const chunks = [];
+        for (let i = 0; i < array.length; i += size) {
+            chunks.push(array.slice(i, i + size));
+        }
+        return chunks;
+    };
 
     const handleLogout = async () => {
         Alert.alert(
@@ -68,9 +78,13 @@ export default function HelpProviderDashboard({ navigation }) {
         );
     };
 
-    const renderItem = ({ item }) => {
-        return (
+    const renderCard = (item) => (
+        <View style={styles.cardWrapper}>
             <View style={styles.listItem}>
+                <View style={styles.avatarContainer}>
+                    <Image source={item.image} style={styles.avatarImage} />
+                </View>
+
                 <Text style={styles.seekerName}>{item.name}</Text>
 
                 <View style={styles.actionRow}>
@@ -101,8 +115,19 @@ export default function HelpProviderDashboard({ navigation }) {
                     </TouchableOpacity>
                 </View>
             </View>
-        );
-    };
+        </View>
+    );
+
+    const renderRow = ({ item: row }) => (
+        <View style={styles.row}>
+            {row.map((seeker) => (
+                <View key={seeker.id} style={styles.gridCell}>
+                    {renderCard(seeker)}
+                </View>
+            ))}
+            {row.length === 1 && <View style={styles.gridCell} />}
+        </View>
+    );
 
     const renderEmptyState = () => (
         <View style={styles.emptyState}>
@@ -132,14 +157,18 @@ export default function HelpProviderDashboard({ navigation }) {
             />
 
             <View style={styles.container}>
-                <FlatList
-                    data={HARD_CODED_HELP_SEEKERS}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={renderEmptyState}
-                />
+                {HARD_CODED_HELP_SEEKERS.length === 0 ? (
+                    renderEmptyState()
+                ) : (
+                    <FlatList
+                        data={chunkArray(HARD_CODED_HELP_SEEKERS, 2)}
+                        keyExtractor={(item, index) => `row-${index}`}
+                        renderItem={renderRow}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        scrollEnabled={true}
+                    />
+                )}
             </View>
         </SafeAreaView>
     );
@@ -158,32 +187,65 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: verticalScale(16),
     },
-    listItem: {
+    row: {
         flexDirection: "row",
-        alignItems: "center",
         justifyContent: "space-between",
+        marginBottom: verticalScale(12),
+    },
+    gridCell: {
+        flex: 1,
+        marginHorizontal: moderateScale(6),
+    },
+    cardWrapper: {
+        flex: 1,
+    },
+    listItem: {
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
         backgroundColor: colors.card,
         borderWidth: 1,
         borderColor: colors.primary,
         borderRadius: moderateScale(12),
-        paddingHorizontal: moderateScale(14),
-        paddingVertical: verticalScale(14),
-        marginBottom: verticalScale(10),
+        paddingHorizontal: moderateScale(12),
+        paddingVertical: moderateScale(20),
+    },
+    avatarContainer: {
+        width: moderateScale(90),
+        height: moderateScale(90),
+        borderRadius: moderateScale(45),
+        backgroundColor: "transparent",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: verticalScale(12),
+    },
+    avatarImage: {
+        width: "100%",
+        height: "100%",
+        borderRadius: moderateScale(45),
     },
     seekerName: {
-        flex: 1,
         color: colors.textDark,
-        fontSize: scale(15),
-        fontWeight: "600",
+        fontSize: scale(16),
+        fontWeight: "700",
+        marginBottom: verticalScale(12),
+        textAlign: "center",
     },
     actionRow: {
         flexDirection: "row",
         alignItems: "center",
-        marginLeft: moderateScale(12),
+        justifyContent: "center",
+        marginLeft: 0,
     },
     iconButton: {
-        padding: moderateScale(6),
+        padding: moderateScale(8),
         marginLeft: moderateScale(8),
+        borderWidth: 1,
+        borderColor: colors.primary,
+        borderRadius: moderateScale(8),
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
     },
     emptyState: {
         flex: 1,
