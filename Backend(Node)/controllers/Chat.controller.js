@@ -10,64 +10,55 @@ import HelpProvider from "../Models/HelpProvider.model.js";
 // POST /api/chat/create
 // Body: { helpSeekerUserId, helpProviderId }
 // ─────────────────────────────────────────────────────────────────────────────
-export const createChat = async (req, res) => {
-    try {
-        const { helpSeekerUserId, helpProviderId } = req.body;
-
-        if (!helpSeekerUserId || !helpProviderId) {
-            return res.status(400).json({
-                message: "helpSeekerUserId and helpProviderId are required",
-            });
-        }
-
-        const [seeker, provider] = await Promise.all([
-            User.findById(helpSeekerUserId),
-            HelpProvider.findById(helpProviderId),
-        ]);
-
-        if (!seeker) {
-            return res.status(404).json({ message: "Help seeker not found" });
-        }
-
-        if (!provider) {
-            return res.status(404).json({ message: "Help provider not found" });
-        }
-
-        const existing = await Chat.findOne({
-            helpSeekerId: helpSeekerUserId,
-            helpProviderId,
-        });
-
-        if (existing) {
-            return res.status(200).json({
-                message: "Chat already exists",
-                chat: {
-                    chatId: existing._id,
-                    helpSeekerId: existing.helpSeekerId,
-                    helpProviderId: existing.helpProviderId,
-                    createdAt: existing.createdAt,
-                },
-            });
-        }
-
-        const chat = await Chat.create({
-            helpSeekerId: helpSeekerUserId,
-            helpProviderId,
-        });
-
-        res.status(201).json({
-            message: "Chat created",
-            chat: {
-                chatId: chat._id,
-                helpSeekerId: chat.helpSeekerId,
-                helpProviderId: chat.helpProviderId,
-                createdAt: chat.createdAt,
-            },
-        });
-    } catch (error) {
-        console.error("Create Chat Error:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+export const createChat = async ({ helpSeekerUserId, helpProviderId }) => {
+    if (!helpSeekerUserId || !helpProviderId) {
+        throw new Error("helpSeekerUserId and helpProviderId are required");
     }
+
+    const [seeker, provider] = await Promise.all([
+        User.findById(helpSeekerUserId),
+        HelpProvider.findById(helpProviderId),
+    ]);
+
+    if (!seeker) {
+        throw new Error("Help seeker not found");
+    }
+
+    if (!provider) {
+        throw new Error("Help provider not found");
+    }
+
+    const existing = await Chat.findOne({
+        helpSeekerId: helpSeekerUserId,
+        helpProviderId,
+    });
+
+    if (existing) {
+        return {
+            message: "Chat already exists",
+            chat: {
+                chatId: existing._id,
+                helpSeekerId: existing.helpSeekerId,
+                helpProviderId: existing.helpProviderId,
+                createdAt: existing.createdAt,
+            },
+        };
+    }
+
+    const chat = await Chat.create({
+        helpSeekerId: helpSeekerUserId,
+        helpProviderId,
+    });
+
+    return {
+        message: "Chat created",
+        chat: {
+            chatId: chat._id,
+            helpSeekerId: chat.helpSeekerId,
+            helpProviderId: chat.helpProviderId,
+            createdAt: chat.createdAt,
+        },
+    };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
