@@ -1,7 +1,7 @@
 import User from "../Models/User.model.js";
 import HelpProvider from "../Models/HelpProvider.model.js";
-import { generateRandomPassword } from "../utils/passwordHelper.js";
-import { sendHelpProviderCredentials } from "../utils/emailService.js";
+import { generateRandomPassword } from "../utils/Passwordhelper.js";
+import { sendHelpProviderCredentials } from "../utils/Emailservice.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INVITE HELP PROVIDER

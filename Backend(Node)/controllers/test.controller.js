@@ -30,7 +30,7 @@ export const fetchRedditData = async (req, res) => {
     console.log("Fetched user for reddit data fetch:", user);
     console.log("Fetched user token:", user.refreshToken);
 
-    const result = await fetchAuthenticatedUserContent({ refreshToken: user.token, userId });
+    const result = await fetchAuthenticatedUserContent({ refreshToken: user.refreshToken, userId });
     return res.json({ count: result.length, results: result });
   } catch (error) {
     return res.status(400).json({ message: error.message || "Failed to fetch user data from reddit" });

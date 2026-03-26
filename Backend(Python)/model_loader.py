@@ -8,5 +8,4 @@ classifier = pipeline(
     "text-classification",
     model="j-hartmann/emotion-english-distilroberta-base",
     token=HF_TOKEN,
-    return_all_scores=True
 )

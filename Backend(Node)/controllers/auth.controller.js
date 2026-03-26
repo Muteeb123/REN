@@ -32,7 +32,9 @@ export const redditAuth = (req, res) => {
     };
     const encodedState = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
+    
     console.log("Initiating Reddit Auth...");
+    const scope = encodeURIComponent("identity history");
     const url =
         `https://www.reddit.com/api/v1/authorize?` +
         `client_id=${process.env.REDDIT_CLIENT_ID}` +
@@ -40,7 +42,7 @@ export const redditAuth = (req, res) => {
         `&state=${encodedState}` +
         `&redirect_uri=${process.env.REDDIT_REDIRECT_URI}` +
         `&duration=permanent` +
-        `&scope=identity edit flair history modconfig modflair modlog modposts modwiki mysubreddits privatemessages read report save submit subscribe vote wikiedit wikiread`;
+        `&scope=${scope}`;
 
 
 
@@ -143,6 +145,7 @@ export const redditCallback = async (req, res) => {
             `userId=${encodeURIComponent(user._id.toString())}` +
             `&personalized=${encodeURIComponent(String(user.personalized))}`;
 
+        console.log("Redirecting user to:", redirectUrl);
         return res.redirect(redirectUrl);
 
     } catch (error) {

@@ -5,6 +5,6 @@ def analyze_text(text: str):
         raise ValueError("text must be a non-empty string")
 
     try:
-        return classifier(text.strip())
+        return classifier(text.strip(), top_k=None)
     except Exception as exc:
-        raise RuntimeError("Sentiment model inference failed") from exc
+        raise RuntimeError("Sentiment model inference failed") from excs
