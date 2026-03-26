@@ -32,10 +32,10 @@ const colors = {
 };
 
 const HARD_CODED_HELP_SEEKERS = [
-    { id: "hs-1", name: "Midind", image: require("../../assets/Happy.png") },
-    { id: "hs-2", name: "adjiqin", image: require("../../assets/Anxious.png") },
-    { id: "hs-3", name: "idiajdin", image: require("../../assets/Neutral.png") },
-    { id: "hs-4", name: "sadjida", image: require("../../assets/Sad.png") },
+    { id: "hs-1", name: "Midind", image: { uri: "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_4.png" } },
+    { id: "hs-2", name: "adjiqin", image: { uri: "https://i.redd.it/snoovatar/avatars/54611f7c-d0e4-429e-8957-dc3bd4d122a3.png" } },
+    { id: "hs-3", name: "idiajdin", image: { uri: "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png" } },
+    { id: "hs-4", name: "sadjida", image: { uri: "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png" } },
 ];
 
 export default function HelpProviderDashboard({ navigation }) {
@@ -89,7 +89,7 @@ export default function HelpProviderDashboard({ navigation }) {
 
                 <View style={styles.actionRow}>
                     <TouchableOpacity
-                        style={styles.iconButton}
+                        style={[styles.actionButton, styles.primaryButton]}
                         onPress={() =>
                             navigation.navigate("HelpProviderStatistics", {
                                 seekerId: item.id,
@@ -98,11 +98,12 @@ export default function HelpProviderDashboard({ navigation }) {
                         }
                         accessibilityLabel={`View statistics for ${item.name}`}
                     >
-                        <Ionicons name="stats-chart-outline" size={scale(20)} color={colors.primary} />
+                        <Ionicons name="stats-chart-outline" size={scale(18)} color="#FFFFFF" />
+                        <Text style={styles.buttonText}>Statistics</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.iconButton}
+                        style={[styles.actionButton, styles.secondaryButton]}
                         onPress={() =>
                             navigation.navigate("HelpProviderChat", {
                                 seekerId: item.id,
@@ -111,7 +112,8 @@ export default function HelpProviderDashboard({ navigation }) {
                         }
                         accessibilityLabel={`Open chat for ${item.name}`}
                     >
-                        <Ionicons name="chatbubble-ellipses-outline" size={scale(20)} color={colors.primary} />
+                        <Ionicons name="chatbubble-ellipses-outline" size={scale(18)} color={colors.primary} />
+                        <Text style={styles.secondaryButtonText}>Chat</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -125,7 +127,6 @@ export default function HelpProviderDashboard({ navigation }) {
                     {renderCard(seeker)}
                 </View>
             ))}
-            {row.length === 1 && <View style={styles.gridCell} />}
         </View>
     );
 
@@ -161,7 +162,7 @@ export default function HelpProviderDashboard({ navigation }) {
                     renderEmptyState()
                 ) : (
                     <FlatList
-                        data={chunkArray(HARD_CODED_HELP_SEEKERS, 2)}
+                        data={chunkArray(HARD_CODED_HELP_SEEKERS, 1)}
                         keyExtractor={(item, index) => `row-${index}`}
                         renderItem={renderRow}
                         contentContainerStyle={styles.listContent}
@@ -188,13 +189,13 @@ const styles = StyleSheet.create({
         paddingBottom: verticalScale(16),
     },
     row: {
-        flexDirection: "row",
-        justifyContent: "space-between",
+        flexDirection: "column",
+        width: "100%",
         marginBottom: verticalScale(12),
     },
     gridCell: {
-        flex: 1,
-        marginHorizontal: moderateScale(6),
+        width: "100%",
+        marginHorizontal: 0,
     },
     cardWrapper: {
         flex: 1,
@@ -204,11 +205,15 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: colors.primary,
         borderRadius: moderateScale(12),
         paddingHorizontal: moderateScale(12),
         paddingVertical: moderateScale(20),
+        margin: verticalScale(12),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: moderateScale(8),
+
     },
     avatarContainer: {
         width: moderateScale(90),
@@ -232,20 +237,40 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     actionRow: {
+        flexDirection: "column",
+        width: "100%",
+        marginTop: verticalScale(12),
+        gap: verticalScale(8),
+    },
+    actionButton: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        marginLeft: 0,
+        paddingHorizontal: moderateScale(12),
+        paddingVertical: verticalScale(10),
+        borderRadius: moderateScale(8),
+        width: "100%",
     },
-    iconButton: {
-        padding: moderateScale(8),
-        marginLeft: moderateScale(8),
+    primaryButton: {
+        backgroundColor: colors.primary,
+        borderWidth: 0,
+    },
+    secondaryButton: {
+        backgroundColor: "#FFFFFF",
         borderWidth: 1,
         borderColor: colors.primary,
-        borderRadius: moderateScale(8),
-        backgroundColor: "#FFFFFF",
-        alignItems: "center",
-        justifyContent: "center",
+    },
+    buttonText: {
+        color: "#FFFFFF",
+        fontSize: scale(14),
+        fontWeight: "600",
+        marginLeft: moderateScale(8),
+    },
+    secondaryButtonText: {
+        color: colors.primary,
+        fontSize: scale(14),
+        fontWeight: "600",
+        marginLeft: moderateScale(8),
     },
     emptyState: {
         flex: 1,
