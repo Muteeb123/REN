@@ -128,7 +128,7 @@ const LoginScreen = () => {
             } else {
                 // Navigate to appropriate screen
                 setIsLoading(false);
-                navigation.replace("MainTabs");
+                navigation.replace("HelpProviderDashboard");
             }
         } catch (err) {
             console.log("Login error:", err);
@@ -190,7 +190,7 @@ const LoginScreen = () => {
             }
 
             setIsLoading(false);
-            navigation.replace("MainTabs");
+            navigation.replace("HelpProviderDashboard");
         } catch (err) {
             console.log("Password update error:", err);
             setError("Connection error. Please try again.");
