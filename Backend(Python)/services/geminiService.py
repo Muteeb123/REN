@@ -2,172 +2,169 @@ from google import genai
 from config.db import db
 from datetime import datetime
 from dotenv import load_dotenv
+from bson import ObjectId
 import os
 
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
-print(f"Loaded Gemini API Key: {API_KEY[:5]}...")  # Print first 5 characters for verification
-client = genai.Client(api_key= API_KEY)
+print(f"Loaded Gemini API Key: {API_KEY[:5]}...")
+client = genai.Client(api_key=API_KEY)
 MODEL_NAME = "gemma-3-27b-it"
 
-# System prompt for REN
-SYSTEM_PROMPT = SYSTEM_PROMPT = "You are REN (Reflective Emotion Navigator), an empathetic and supportive emotional wellness assistant. Your purpose is to help users understand and navigate their emotions with compassion and insight. Use your name naturally when introducing yourself or when asked, but don't repeat it unnecessarily in every response. Respond in plain text only without asterisks or formatting symbols."
+BASE_SYSTEM_PROMPT = (
+    "You are REN (Reflective Emotion Navigator), an empathetic and supportive "
+    "emotional wellness assistant. Your purpose is to help users understand and "
+    "navigate their emotions with compassion and insight. Use your name naturally "
+    "when introducing yourself or when asked, but don't repeat it unnecessarily "
+    "in every response. Respond in plain text only without asterisks or formatting symbols."
+)
+
+
+async def _get_llm_context(user_id: str) -> str:
+    """
+    Fetch the pre-computed llmContext string from AggregatedEmotion.
+    Returns an empty string silently if no record exists or on any DB error,
+    so a missing aggregation never breaks the conversation.
+    """
+    try:
+        doc = await db.aggregatedemotions.find_one(
+            {"userId": ObjectId(user_id)},
+            {"llmContext": 1, "_id": 0},
+        )
+        return (doc or {}).get("llmContext", "")
+    except Exception as exc:
+        print(f"[geminiService] Could not fetch llmContext for {user_id}: {exc}")
+        return ""
+
+
+def _build_system_prompt(llm_context: str) -> str:
+    """
+    Append the emotion context sentence to the base prompt when available.
+    """
+    if not llm_context:
+        return BASE_SYSTEM_PROMPT
+    return f"{BASE_SYSTEM_PROMPT} {llm_context}"
+
 
 async def generateResponse(user_id: str, user_message: str):
-    
-    
-    
-    # Fetch active conversation from db
+
+    # ── 1. Fetch emotion context (best-effort, never blocks) ─────────────────
+    llm_context = await _get_llm_context(user_id)
+    system_prompt = _build_system_prompt(llm_context)
+    print(f"[geminiService] Using system prompt for {user_id}: {system_prompt}]...")
+
+    # ── 2. Fetch active conversation ─────────────────────────────────────────
     conv = await db.conversations.find_one({
         "user_id": user_id,
-        "active": True
+        "active": True,
     })
-   
 
     messages_for_gemini = []
-    new_conv = False
-    
-    # Determine which conversation to use
+
+    # ── 3. Build message history ──────────────────────────────────────────────
     if conv and conv.get("messages"):
-        # Use existing active conversation
-       
+        # Existing active conversation — replay history
         for msg in conv["messages"]:
             messages_for_gemini.append({
                 "role": msg["role"],
-                "parts": [{"text": msg["content"]}]
+                "parts": [{"text": msg["content"]}],
             })
-        
+
     else:
-        # No active conversation - check for last conversation
-    
+        # No active conversation — look for most recent closed one
         last_conv = await db.conversations.find_one(
             {"user_id": user_id, "active": False},
-            sort=[("created_at", -1)]
+            sort=[("created_at", -1)],
         )
 
         if last_conv and last_conv.get("messages"):
-            # Use last conversation as context
-    
             for msg in last_conv["messages"]:
                 messages_for_gemini.append({
                     "role": msg["role"],
-                    "parts": [{"text": msg["content"]}]
+                    "parts": [{"text": msg["content"]}],
                 })
-            # Create new active conversation
-            conv = {
-                "user_id": user_id,
-                "active": True,
-                "messages": [],
-                "updated_at": datetime.now(),
-                "created_at": datetime.now()
-            }
-            conv["messages"].append({
-                "role": "model",
-                "content": "Hi, I am REN, your emotional wellness assistant. How can I support you today?",
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            })
+
         else:
-            # Brand new user - add system prompt
-      
-            new_conv = True
+            # Brand-new user — seed with system prompt exchange
             messages_for_gemini.append({
                 "role": "user",
-                "parts": [{"text": SYSTEM_PROMPT}]
+                "parts": [{"text": system_prompt}],
             })
             messages_for_gemini.append({
                 "role": "model",
-                "parts": [{"text": "I understand. I'm here to support you with empathy and understanding. How can I help you today?"}]
+                "parts": [{"text": "I understand. I'm here to support you with empathy and understanding. How can I help you today?"}],
             })
-            # Create new conversation
-            conv = {
-                "user_id": user_id,
-                "active": True,
-                "messages": [],
-                "updated_at": datetime.now(),
-                "created_at": datetime.now()
-            }
-            conv["messages"].append({
+
+        # Create a fresh active conversation document
+        conv = {
+            "user_id": user_id,
+            "active": True,
+            "messages": [{
                 "role": "model",
                 "content": "Hi, I am REN, your emotional wellness assistant. How can I support you today?",
                 "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            })
-    
-    # Add current user message to conversation
-    current_msg = {
+                "updated_at": datetime.now(),
+            }],
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
+        }
+
+    # ── 4. Append the current user message ───────────────────────────────────
+    conv["messages"].append({
         "role": "user",
         "content": user_message,
         "created_at": datetime.now(),
-        "updated_at": datetime.now()
-    }
-    conv["messages"].append(current_msg)
-    
-    # Add current message to Gemini API call
+        "updated_at": datetime.now(),
+    })
     messages_for_gemini.append({
         "role": "user",
-        "parts": [{"text": user_message}]
+        "parts": [{"text": user_message}],
     })
-    
-    # Send all messages in ONE API call
+
+    # ── 5. Call Gemini ────────────────────────────────────────────────────────
     try:
         response = client.models.generate_content(
             model=MODEL_NAME,
-            contents=messages_for_gemini
+            contents=messages_for_gemini,
         )
-        
-        print("Gemini response:2 ")
         assistant_reply = response.text
-        
-        # Store assistant's reply in conversation
+
         conv["messages"].append({
             "role": "model",
             "content": assistant_reply,
+            "created_at": datetime.now(),
             "updated_at": datetime.now(),
-            "created_at": datetime.now()
         })
-        
-        # Update timestamp
         conv["updated_at"] = datetime.now()
-        
-        # Update conversation in database
+
         await db.conversations.update_one(
             {"user_id": user_id, "active": True},
             {"$set": conv},
-            upsert=True
+            upsert=True,
         )
-       
-        return {
-            "reply": assistant_reply
-        }
+
+        return {"reply": assistant_reply}
+
     except Exception as e:
-        print(f"Error generating response from Gemini: {str(e)}")
-        # Return error message to user
+        print(f"[geminiService] Error generating response: {e}")
         error_reply = "I apologize, but I encountered an error while processing your message. Please try again."
-        
-        # Store error message in conversation
+
         conv["messages"].append({
             "role": "model",
             "content": error_reply,
+            "created_at": datetime.now(),
             "updated_at": datetime.now(),
-            "created_at": datetime.now()
         })
-        
-        # Update timestamp
         conv["updated_at"] = datetime.now()
-        
-        # Update conversation in database
+
         try:
             await db.conversations.update_one(
                 {"user_id": user_id, "active": True},
                 {"$set": conv},
-                upsert=True
+                upsert=True,
             )
         except Exception as db_error:
-            print(f"Error updating conversation in database: {str(db_error)}")
-        
-        return {
-            "reply": error_reply,
-            "error": str(e)
-        }
+            print(f"[geminiService] Error persisting error reply: {db_error}")
+
+        return {"reply": error_reply, "error": str(e)}

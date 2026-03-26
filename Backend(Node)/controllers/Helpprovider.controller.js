@@ -2,6 +2,7 @@ import User from "../Models/User.model.js";
 import HelpProvider from "../Models/HelpProvider.model.js";
 import { generateRandomPassword } from "../utils/Passwordhelper.js";
 import { sendHelpProviderCredentials } from "../utils/Emailservice.js";
+import { computeMoodStats } from "../services/moodStats.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INVITE HELP PROVIDER
@@ -217,3 +218,51 @@ export const updatePassword = async (req, res) => {
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET MOOD STATS
+// Called by the help provider to view their assigned seeker's mood statistics.
+//
+// GET /api/helpprovider/mood-stats/:providerId
+// Query: ?windowDays=30  (optional, default 30)
+//
+// Flow:
+//   1. Verify the provider exists
+//   2. Find the help seeker who was invited by this provider
+//   3. Compute and return mood statistics for that seeker
+// ─────────────────────────────────────────────────────────────────────────────
+export const getMoodStats = async (req, res) => {
+    try {
+        const { providerId } = req.params;
+        const windowDays = Math.min(
+            Math.max(1, parseInt(req.query.windowDays) || 30),
+            90  // cap at 90 days to keep queries fast
+        );
+ 
+        const provider = await HelpProvider.findById(providerId).lean();
+        if (!provider) {
+            return res.status(404).json({ message: "Help provider not found" });
+        }
+ 
+        // The seeker who invited this provider
+        const seeker = await User.findById(provider.invitedBy)
+            .select("_id name preferredName")
+            .lean();
+ 
+        if (!seeker) {
+            return res.status(404).json({ message: "Associated help seeker not found" });
+        }
+ 
+        const stats = await computeMoodStats(seeker._id.toString(), windowDays);
+ 
+        return res.status(200).json({
+            seeker: {
+                id:   seeker._id,
+                name: seeker.preferredName || seeker.name,
+            },
+            stats,
+        });
+    } catch (error) {
+        console.error("Get Mood Stats Error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};

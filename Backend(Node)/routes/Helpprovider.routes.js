@@ -1,5 +1,5 @@
 import express from "express";
-import { inviteHelpProvider, helpProviderLogin } from "../controllers/Helpprovider.controller.js";
+import { inviteHelpProvider, helpProviderLogin, getMoodStats, } from "../controllers/Helpprovider.controller.js";
 
 const router = express.Router();
 
@@ -10,5 +10,9 @@ router.post("/invite", inviteHelpProvider);
 // POST /api/help-provider/login
 // Help provider logs in using emailed credentials
 router.post("/login", helpProviderLogin);
+
+// GET /api/helpprovider/mood-stats/:providerId?windowDays=30
+// Help provider fetches mood statistics for their assigned seeker
+router.get("/mood-stats/:providerId", getMoodStats);
 
 export default router;
