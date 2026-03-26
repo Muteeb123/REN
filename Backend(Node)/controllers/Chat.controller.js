@@ -195,7 +195,7 @@ export const getSeekersByProvider = async (req, res) => {
 
         // Find all users who have this provider's email as their helpContactEmail
         const seekers = await User.find({ helpContactEmail: provider.email })
-            .select("name preferredName email helpContactEmail");
+            .select("name avatar preferredName email helpContactEmail");
 
         if (!seekers.length) {
             return res.status(404).json({ message: "No seekers found for this provider" });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     SafeAreaView,
     View,
@@ -9,11 +9,13 @@ import {
     Dimensions,
     Alert,
     Image,
+    ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Header";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NODE_BACKEND_URL } from "../config/urls";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -31,24 +33,65 @@ const colors = {
     primary: "#52ACD7",
 };
 
-const HARD_CODED_HELP_SEEKERS = [
-    { id: "hs-1", name: "Midind", image: { uri: "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_4.png" } },
-    { id: "hs-2", name: "adjiqin", image: { uri: "https://i.redd.it/snoovatar/avatars/54611f7c-d0e4-429e-8957-dc3bd4d122a3.png" } },
-    { id: "hs-3", name: "idiajdin", image: { uri: "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png" } },
-    { id: "hs-4", name: "sadjida", image: { uri: "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png" } },
-];
+const DEFAULT_AVATAR_URL = "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_4.png";
 
 export default function HelpProviderDashboard({ navigation }) {
     const insets = useSafeAreaInsets();
+    const [helpSeekers, setHelpSeekers] = useState([]);
+    const [isLoadingSeekers, setIsLoadingSeekers] = useState(true);
+    const [seekersError, setSeekersError] = useState("");
 
-    // Helper function to chunk array into groups of 2
-    const chunkArray = (array, size) => {
-        const chunks = [];
-        for (let i = 0; i < array.length; i += size) {
-            chunks.push(array.slice(i, i + size));
-        }
-        return chunks;
-    };
+    useEffect(() => {
+        const fetchHelpSeekers = async () => {
+            try {
+                setIsLoadingSeekers(true);
+                setSeekersError("");
+
+                const providerId = await AsyncStorage.getItem("userId");
+                if (!providerId) {
+                    setSeekersError("Provider session not found.");
+                    setHelpSeekers([]);
+                    return;
+                }
+
+                const response = await fetch(`${NODE_BACKEND_URL}/api/chat/seekers/${providerId}`);
+
+                if (response.status === 404) {
+                    setHelpSeekers([]);
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data?.message || "Failed to load help seekers");
+                }
+
+                const mappedSeekers = (data.seekers || [])
+                    .map((seeker) => ({
+                        id: seeker?._id || seeker?.id,
+                        name:
+                            seeker?.preferredName?.trim() ||
+                            seeker?.name?.trim() ||
+                            seeker?.email ||
+                            "Unknown",
+                        image: {
+                            uri: seeker?.avatar?.trim() || DEFAULT_AVATAR_URL,
+                        },
+                    }))
+                    .filter((seeker) => Boolean(seeker.id));
+
+                setHelpSeekers(mappedSeekers);
+            } catch (error) {
+                setSeekersError(error.message || "Failed to load help seekers.");
+                setHelpSeekers([]);
+            } finally {
+                setIsLoadingSeekers(false);
+            }
+        };
+
+        fetchHelpSeekers();
+    }, []);
 
     const handleLogout = async () => {
         Alert.alert(
@@ -78,7 +121,7 @@ export default function HelpProviderDashboard({ navigation }) {
         );
     };
 
-    const renderCard = (item) => (
+    const renderItem = ({ item }) => (
         <View style={styles.cardWrapper}>
             <View style={styles.listItem}>
                 <View style={styles.avatarContainer}>
@@ -120,16 +163,6 @@ export default function HelpProviderDashboard({ navigation }) {
         </View>
     );
 
-    const renderRow = ({ item: row }) => (
-        <View style={styles.row}>
-            {row.map((seeker) => (
-                <View key={seeker.id} style={styles.gridCell}>
-                    {renderCard(seeker)}
-                </View>
-            ))}
-        </View>
-    );
-
     const renderEmptyState = () => (
         <View style={styles.emptyState}>
             <Ionicons name="person-outline" size={scale(60)} color={colors.textLight} />
@@ -158,16 +191,24 @@ export default function HelpProviderDashboard({ navigation }) {
             />
 
             <View style={styles.container}>
-                {HARD_CODED_HELP_SEEKERS.length === 0 ? (
+                {isLoadingSeekers ? (
+                    <View style={styles.loadingState}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                    </View>
+                ) : seekersError ? (
+                    <View style={styles.emptyState}>
+                        <Ionicons name="alert-circle-outline" size={scale(48)} color={colors.textLight} />
+                        <Text style={styles.emptyStateText}>{seekersError}</Text>
+                    </View>
+                ) : helpSeekers.length === 0 ? (
                     renderEmptyState()
                 ) : (
                     <FlatList
-                        data={chunkArray(HARD_CODED_HELP_SEEKERS, 1)}
-                        keyExtractor={(item, index) => `row-${index}`}
-                        renderItem={renderRow}
+                        data={helpSeekers}
+                        keyExtractor={(item) => item.id}
+                        renderItem={renderItem}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
-                        scrollEnabled={true}
                     />
                 )}
             </View>
@@ -188,17 +229,9 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: verticalScale(16),
     },
-    row: {
-        flexDirection: "column",
+    cardWrapper: {
         width: "100%",
         marginBottom: verticalScale(12),
-    },
-    gridCell: {
-        width: "100%",
-        marginHorizontal: 0,
-    },
-    cardWrapper: {
-        flex: 1,
     },
     listItem: {
         flexDirection: "column",
@@ -208,7 +241,7 @@ const styles = StyleSheet.create({
         borderRadius: moderateScale(12),
         paddingHorizontal: moderateScale(12),
         paddingVertical: moderateScale(20),
-        margin: verticalScale(12),
+        margin: moderateScale(12),
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -277,6 +310,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         paddingVertical: verticalScale(80),
+    },
+    loadingState: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
     },
     emptyStateText: {
         marginTop: verticalScale(16),

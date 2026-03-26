@@ -1,5 +1,5 @@
 // src/screens/LoginScreen.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     View,
     Text,
@@ -11,6 +11,8 @@ import {
     ScrollView,
     KeyboardAvoidingView,
     Platform,
+    Animated,
+    Easing,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -46,6 +48,33 @@ const LoginScreen = () => {
     // Error and user tracking
     const [error, setError] = useState("");
     const [currentUserId, setCurrentUserId] = useState(null);
+    const flipAnim = useRef(new Animated.Value(0)).current;
+
+    const animateModeChange = (nextMode, callback) => {
+        if (nextMode === loginMode) {
+            if (callback) callback();
+            return;
+        }
+
+        Animated.timing(flipAnim, {
+            toValue: 1,
+            duration: 220,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+        }).start(() => {
+            setLoginMode(nextMode);
+            if (callback) callback();
+
+            flipAnim.setValue(-1);
+
+            Animated.timing(flipAnim, {
+                toValue: 0,
+                duration: 280,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }).start();
+        });
+    };
 
     // ============ OAUTH LOGIN ============
     const handleAuth = async () => {
@@ -121,7 +150,7 @@ const LoginScreen = () => {
             // Check if password change is required
             if (data.helpProvider?.passwordChanged === false || data.passwordChanged === false) {
                 setCurrentUserId(data.helpProvider?.id || data.id);
-                setLoginMode("passwordChange");
+                animateModeChange("passwordChange");
                 setIsLoading(false);
                 setEmail("");
                 setPassword("");
@@ -200,20 +229,22 @@ const LoginScreen = () => {
 
     // ============ MODE TOGGLES ============
     const toggleToHelpProvider = () => {
-        setLoginMode("helpProvider");
-        setEmail("");
-        setPassword("");
-        setError("");
+        animateModeChange("helpProvider", () => {
+            setEmail("");
+            setPassword("");
+            setError("");
+        });
     };
 
     const toggleToDefault = () => {
-        setLoginMode("default");
-        setEmail("");
-        setPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        setError("");
-        setCurrentUserId(null);
+        animateModeChange("default", () => {
+            setEmail("");
+            setPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setError("");
+            setCurrentUserId(null);
+        });
     };
 
     // ============ DEEP LINK HANDLER ============
@@ -415,11 +446,32 @@ const LoginScreen = () => {
                 keyboardDismissMode="on-drag"
             >
                 <View style={styles.container}>
-                    <View style={styles.centerContent}>
+                    <Animated.View
+                        style={[
+                            styles.centerContent,
+                            {
+                                opacity: flipAnim.interpolate({
+                                    inputRange: [-1, 0, 1],
+                                    outputRange: [0, 1, 0],
+                                }),
+                                transform: [
+                                    {
+                                        perspective: 900,
+                                    },
+                                    {
+                                        rotateX: flipAnim.interpolate({
+                                            inputRange: [-1, 0, 1],
+                                            outputRange: ["-90deg", "0deg", "90deg"],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    >
                         {loginMode === "default" && renderDefaultState()}
                         {loginMode === "helpProvider" && renderHelpProviderState()}
                         {loginMode === "passwordChange" && renderPasswordChangeState()}
-                    </View>
+                    </Animated.View>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
