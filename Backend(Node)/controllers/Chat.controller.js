@@ -187,19 +187,19 @@ export const getSeekersByProvider = async (req, res) => {
     try {
         const { providerId } = req.params;
 
-        const chats = await Chat.find({ helpProviderId: providerId })
-            .populate("helpSeekerId", "name preferredName email")
-            .select("helpSeekerId createdAt");
-
-        if (!chats.length) {
-            return res.status(404).json({ message: "No seekers found for this provider" });
+        // Find the provider to get their email first
+        const provider = await HelpProvider.findById(providerId);
+        if (!provider) {
+            return res.status(404).json({ message: "Help provider not found" });
         }
 
-        const seekers = chats.map((chat) => ({
-            chatId: chat._id,
-            seeker: chat.helpSeekerId, // populated with name, preferredName, email
-            chatStartedAt: chat.createdAt,
-        }));
+        // Find all users who have this provider's email as their helpContactEmail
+        const seekers = await User.find({ helpContactEmail: provider.email })
+            .select("name preferredName email helpContactEmail");
+
+        if (!seekers.length) {
+            return res.status(404).json({ message: "No seekers found for this provider" });
+        }
 
         res.status(200).json({ seekers });
     } catch (error) {
