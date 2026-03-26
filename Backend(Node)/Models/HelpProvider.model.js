@@ -33,6 +33,11 @@ const helpProviderSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+
+        passwordChanged: {
+            type: Boolean,
+            default: false,
+        }
     },
     {
         timestamps: true,

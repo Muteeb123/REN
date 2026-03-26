@@ -18,7 +18,7 @@ import { sendHelpProviderCredentials } from "../utils/Emailservice.js";
 // ─────────────────────────────────────────────────────────────────────────────
 export const inviteHelpProvider = async (req, res) => {
     try {
-        const { helpSeekerUserId, email, name } = req.body;
+        const { helpSeekerUserId, email } = req.body;
 
         if (!helpSeekerUserId || !email) {
             return res.status(400).json({
@@ -39,41 +39,70 @@ export const inviteHelpProvider = async (req, res) => {
             return res.status(404).json({ message: "Help seeker not found" });
         }
 
-        console.log("Help seeker found:", helpSeeker.email);
+        console.log("Help seeker's provider found!", helpSeeker.helpContactEmail);
+
+        //one help seeker can only have one provider, so if they already have a provider assigned, we should not allow them to create another one. This is to prevent confusion and ensure that the help seeker has a clear point of contact for their needs.
+        if (helpSeeker.helpContactEmail) {
+            return res.status(409).json({
+                message: "You already have a help provider assigned. Only one provider is allowed per help seeker.",
+            });
+        }
 
         // Make sure this email isn't already registered as a User or HelpProvider
+        //checking if the email entered is already registered as a user. there can be more than one provider
         const emailLower = email.toLowerCase();
         const existingUser = await User.findOne({ email: emailLower });
-        const existingProvider = await HelpProvider.findOne({ email: emailLower });
 
-        if (existingUser || existingProvider) {
+        if (existingUser) {
             return res.status(409).json({
-                message: "A user with this email already exists",
+                message: "A help seeker with this email already exists",
             });
         }
 
         // Generate password, create account (password hashed by pre-save hook)
         const plainPassword = generateRandomPassword();
 
-        const helpProvider = await HelpProvider.create({
-            email: emailLower,
-            name: name || undefined,
-            password: plainPassword,
-            invitedBy: helpSeekerUserId,
-        });
+        // ← WRAP all three in a try/catch so any failure is fully atomic
+        try {
+            await sendHelpProviderCredentials(email, plainPassword);
 
-        // Email credentials to the provider
-        await sendHelpProviderCredentials(email, plainPassword);
+            console.log("Email sent successfully to", email);
 
-        res.status(201).json({
-            message: `Help provider account created. Credentials sent to ${email}.`,
-            helpProvider: {
-                id: helpProvider._id,
-                name: helpProvider.name,
-                email: helpProvider.email,
-                invitedBy: helpProvider.invitedBy,
-            },
-        });
+            const helpProvider = await HelpProvider.create({
+                email: emailLower,
+
+                password: plainPassword,
+                invitedBy: helpSeekerUserId,
+            });
+
+            await User.findByIdAndUpdate(helpSeekerUserId, {
+                helpContactEmail: emailLower,
+            });
+
+            return res.status(201).json({
+                message: `Help provider account created. Credentials sent to ${email}.`,
+                helpProvider: {
+                    id: helpProvider._id,
+                    name: helpProvider.name,
+                    email: helpProvider.email,
+                    invitedBy: helpProvider.invitedBy,
+                },
+            });
+        } catch (operationError) {
+            // Rollback: delete the provider doc if it was created before the failure
+            await HelpProvider.findOneAndDelete({ email: emailLower });
+
+            // Rollback: clear helpContactEmail on the seeker if it was set
+            await User.findByIdAndUpdate(helpSeekerUserId, {
+                $unset: { helpContactEmail: "" },
+            });
+
+            console.error("Invite operation failed, changes rolled back:", operationError);
+            return res.status(500).json({
+                message: "Failed to complete invitation. No changes were made.",
+                error: operationError.message,
+            });
+        }
     } catch (error) {
         console.error("Invite Help Provider Error:", error);
         res.status(500).json({ message: "Server error", error: error.message });
@@ -118,6 +147,7 @@ export const helpProviderLogin = async (req, res) => {
                 name: provider.name,
                 email: provider.email,
                 invitedBy: provider.invitedBy,
+                passwordChanged: provider.passwordChanged,
             },
         });
     } catch (error) {
@@ -125,3 +155,65 @@ export const helpProviderLogin = async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE PASSWORD FOR HELP PROVIDER
+// Updates password on first login (when passwordChanged is false).
+//
+// POST /api/auth/update-password
+// Body: { userId, newPassword }
+//
+// Flow:
+//   1. Validate userId and newPassword are provided
+//   2. Find HelpProvider by userId
+//   3. Validate password strength (min 6 characters)
+//   4. Update password and set passwordChanged to true
+//   5. Return success
+// ─────────────────────────────────────────────────────────────────────────────
+export const updatePassword = async (req, res) => {
+    try {
+        const { userId, newPassword } = req.body;
+
+        if (!userId || !newPassword) {
+            return res.status(400).json({
+                message: "userId and newPassword are required",
+            });
+        }
+
+        // Validate password strength
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters long",
+            });
+        }
+
+        // Find the help provider
+        const helpProvider = await HelpProvider.findById(userId);
+
+        if (!helpProvider) {
+            return res.status(404).json({
+                message: "Help provider not found",
+            });
+        }
+
+        // Update password (will be auto-hashed by pre-save hook)
+        helpProvider.password = newPassword;
+        helpProvider.passwordChanged = true;
+
+        await helpProvider.save();
+
+        res.status(200).json({
+            message: "Password updated successfully",
+            helpProvider: {
+                id: helpProvider._id,
+                name: helpProvider.name,
+                email: helpProvider.email,
+                passwordChanged: helpProvider.passwordChanged,
+            },
+        });
+    } catch (error) {
+        console.error("Update Password Error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+

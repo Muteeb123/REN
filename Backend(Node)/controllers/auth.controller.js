@@ -6,26 +6,11 @@ import fetch from "node-fetch";
 export const redditAuth = (req, res) => {
     const scopes = [
         "identity",
-        "edit",
-        "flair",
         "history",
-        "modconfig",
-        "modflair",
-        "modlog",
-        "modposts",
-        "modwiki",
-        "mysubreddits",
-        "privatemessages",
-        "read",
-        "report",
-        "save",
-        "submit",
-        "subscribe",
-        "vote",
-        "wikiedit",
-        "wikiread"
     ].join(" ");
+
     const { appRedirect } = req.query;
+
     const statePayload = {
         nonce: "random_string",
         appRedirect: typeof appRedirect === "string" ? appRedirect : null,
@@ -34,30 +19,29 @@ export const redditAuth = (req, res) => {
 
     
     console.log("Initiating Reddit Auth...");
-    const scope = encodeURIComponent("identity history");
+    console.log("Reddirect URI:", process.env.REDDIT_REDIRECT_URI);
     const url =
         `https://www.reddit.com/api/v1/authorize?` +
         `client_id=${process.env.REDDIT_CLIENT_ID}` +
         `&response_type=code` +
         `&state=${encodedState}` +
-        `&redirect_uri=${process.env.REDDIT_REDIRECT_URI}` +
+        `&redirect_uri=${encodeURIComponent(process.env.REDDIT_REDIRECT_URI)}` +
         `&duration=permanent` +
-        `&scope=${scope}`;
+        `&scope=${encodeURIComponent(scopes)}`;
 
-
+    console.log("Auth URL:", url);
 
     return res.redirect(url);
+    // return res.status(400).send(process.env.REDDIT_REDIRECT_URI);
 
-    //return res.status(400).send(process.env.REDDIT_REDIRECT_URI);
 };
-
 // --- STEP 2: Reddit redirects here ---
 export const redditCallback = async (req, res) => {
     console.log("Received Reddit callback with query:", req.query);
     const { code, state } = req.query;
 
     if (!code) {
-        return res.status(400).send(req.query);
+        return res.status(400).send("req.query");
     }
 
     try {
@@ -100,6 +84,7 @@ export const redditCallback = async (req, res) => {
         );
 
         const profile = await profileRes.json();
+        const avatar = profile.snoovatar_img || profile.icon_img || null;
 
         if (!profile?.name) {
             return res.status(400).send("Failed to fetch profile");
@@ -108,13 +93,14 @@ export const redditCallback = async (req, res) => {
         const email = `${profile.name}@gmail.com`;
 
         // 🔹 Find or create user
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ name: profile.name });
 
         if (!user) {
             user = await User.create({
                 email,
                 name: profile.name,
                 token: tokenData.access_token,
+                avatar,
                 refreshToken: tokenData.refresh_token,
                 age: null,
             });

@@ -22,6 +22,9 @@ import MeditationSession from "../components/MeditationSession";
 import SettingsScreen from "../screens/Settings";
 import Support from "../screens/Support";
 import NavigationBar from "../components/NavigationBar";
+import HelpProviderDashboard from "../screens/HelpProviderDashboard";
+import HelpProviderStatistics from "../screens/HelpProviderStatistics";
+import HelpProviderChat from "../screens/HelpProviderChat";
 
 const Stack = createStackNavigator();
 
@@ -155,6 +158,9 @@ export default function AppNavigator() {
                         <Stack.Screen name="Personalization" component={Personalization} />
                         <Stack.Screen name="MainTabs" component={MainTabsLayout} initialParams={{ screen: "Chat" }} />
                         <Stack.Screen name="MeditationSession" component={MeditationSession} />
+                        <Stack.Screen name="HelpProviderDashboard" component={HelpProviderDashboard} />
+                        <Stack.Screen name="HelpProviderStatistics" component={HelpProviderStatistics} />
+                        <Stack.Screen name="HelpProviderChat" component={HelpProviderChat} />
                     </Stack.Navigator>
                 </SafeAreaView>
             </NavigationContainer>
