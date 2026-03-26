@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
+import { NODE_BACKEND_URL } from "../config/urls";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -67,7 +68,7 @@ const addDateSeparators = (messages) => {
     const result = [];
     let lastDateKey = null;
     for (const msg of messages) {
-        const dateKey = getDateKey(msg.date);
+        const dateKey = getDateKey(msg.createdAt);
         if (dateKey !== lastDateKey) {
             if (lastDateKey !== null) {
                 result.push({ id: `sep-${lastDateKey}`, type: "separator", label: getDateLabel(lastDateKey) });
@@ -82,127 +83,24 @@ const addDateSeparators = (messages) => {
     return result;
 };
 
-const DUMMY_MESSAGES = [
-    {
-        id: "1",
-        text: "Hi there! Welcome to your support space. I'm here to share resources and encouragement with you.",
-        date: "2026-03-01T09:00:00",
-    },
-    {
-        id: "2",
-        text: "A gentle reminder: drink some water and take a few deep breaths. Small acts of self-care matter.",
-        date: "2026-03-01T09:30:00",
-    },
-    {
-        id: "3",
-        text: "You don't have to have everything figured out. Progress isn't always a straight line, and that's perfectly okay.",
-        date: "2026-03-02T08:45:00",
-    },
-    {
-        id: "4",
-        text: "Try writing down three things you're grateful for today. It can shift your perspective in a meaningful way.",
-        date: "2026-03-02T10:15:00",
-    },
-    {
-        id: "5",
-        text: "It's okay to set boundaries. Protecting your energy is not selfish — it's necessary.",
-        date: "2026-03-03T07:50:00",
-    },
-    {
-        id: "6",
-        text: "Here's a quick grounding exercise: name 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, and 1 you can taste.",
-        date: "2026-03-03T11:00:00",
-    },
-    {
-        id: "7",
-        text: "Remember, asking for help is a sign of strength, not weakness. You deserve support.",
-        date: "2026-03-03T15:20:00",
-    },
-    {
-        id: "8",
-        text: "Take a moment to check in with yourself: How are you really feeling right now? There's no wrong answer.",
-        date: "2026-03-04T08:00:00",
-    },
-    {
-        id: "9",
-        text: "If today feels heavy, know that it's okay to rest. You don't always have to be productive to be worthy.",
-        date: "2026-03-04T12:30:00",
-    },
-    {
-        id: "10",
-        text: "Try stepping outside for a few minutes today. Fresh air and sunlight can do wonders for your mood.",
-        date: "2026-03-04T16:45:00",
-    },
-    {
-        id: "11",
-        text: "You've made it through every difficult day so far. That's a 100% success rate. Keep going.",
-        date: "2026-03-05T09:00:00",
-    },
-    {
-        id: "12",
-        text: "Consider listening to some calming music or nature sounds today. It can help quiet a busy mind.",
-        date: "2026-03-05T13:10:00",
-    },
-    {
-        id: "13",
-        text: "Your feelings are valid, even the uncomfortable ones. Let yourself feel without judgment.",
-        date: "2026-03-05T17:00:00",
-    },
-    {
-        id: "14",
-        text: "A good night's sleep can change everything. Try putting away screens 30 minutes before bed tonight.",
-        date: "2026-03-06T08:30:00",
-    },
-    {
-        id: "15",
-        text: "You are more resilient than you think. Look how far you've already come.",
-        date: "2026-03-06T10:30:00",
-    },
-    {
-        id: "16",
-        text: "Today's affirmation: I am enough, exactly as I am right now.",
-        date: "2026-03-06T14:00:00",
-    },
-    {
-        id: "17",
-        text: "Try the 4-7-8 breathing technique: breathe in for 4 seconds, hold for 7, exhale for 8. Repeat 3 times.",
-        date: "2026-03-06T18:15:00",
-    },
-    {
-        id: "18",
-        text: "Good morning! Remember that every new day is a fresh start. Be gentle with yourself today.",
-        date: "2026-03-07T07:00:00",
-    },
-    {
-        id: "19",
-        text: "If you ever need someone to talk to, please don't hesitate to reach out to a trusted person in your life. You are not alone. 💙",
-        date: "2026-03-07T08:15:00",
-    },
-    {
-        id: "20",
-        text: "I'm always here in this space for you. Take things at your own pace — there's no rush.",
-        date: "2026-03-07T10:45:00",
-    },
-];
-
-const MessageBubble = React.memo(({ message, reaction, onLongPress }) => (
+const MessageBubble = React.memo(({ message, onLongPress }) => (
     <TouchableOpacity
         style={styles.messageRow}
-        onLongPress={() => onLongPress(message.id)}
+        onLongPress={() => onLongPress(message._id)}
         delayLongPress={300}
         activeOpacity={0.5}
     >
         <View style={styles.messageBubble}>
             <Text style={styles.messageText}>{message.text}</Text>
-            <Text style={styles.timestamp}>{formatTime(message.date)}</Text>
-            {reaction && (
-                <TouchableOpacity
-                    style={styles.reactionBadge}
-                    onPress={() => onLongPress(message.id)}
-                    activeOpacity={0.6}
-                >
-                    <Text style={styles.reactionEmoji}>{reaction}</Text>
-                </TouchableOpacity>
+            <Text style={styles.timestamp}>{formatTime(message.createdAt)}</Text>
+            {message.reactions && message.reactions.length > 0 && (
+                <View style={styles.reactionsContainer}>
+                    {message.reactions.map((reaction, idx) => (
+                        <View key={idx} style={styles.reactionBadge}>
+                            <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+                        </View>
+                    ))}
+                </View>
             )}
         </View>
     </TouchableOpacity>
@@ -218,30 +116,69 @@ const DateSeparator = ({ label }) => (
 
 export default function Support({ currentScreen, onNavigate }) {
     const insets = useSafeAreaInsets();
-    const [reactions, setReactions] = useState({});
-    const [pickerMessageId, setPickerMessageId] = useState(null);
+    const [messages, setMessages] = useState([]);
     const [helpEmail, setHelpEmail] = useState("");
+    const [helpProviderName, setHelpProviderName] = useState("");
     const [emailLoaded, setEmailLoaded] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [pickerMessageId, setPickerMessageId] = useState(null);
+    const [reacting, setReacting] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const userId = useRef(null);
 
     useEffect(() => {
-        const loadEmail = async () => {
+        const initializeSupport = async () => {
             try {
                 const cachedUser = await AsyncStorage.getItem("cachedUser");
+                const id = await AsyncStorage.getItem("userId");
+                userId.current = id;
+
                 if (cachedUser) {
                     const parsed = JSON.parse(cachedUser);
                     if (parsed?.user?.helpContactEmail) {
                         setHelpEmail(parsed.user.helpContactEmail);
+                        setHelpProviderName(parsed.user.helpContactName || "Help Provider");
+
+                        if (id) {
+                            fetchMessages(id, parsed.user.helpContactEmail);
+                        }
                     }
                 }
+
+                setEmailLoaded(true);
             } catch (e) {
-                console.error("Support loadEmail error:", e);
-            } finally {
+                console.error("Support initialization error:", e);
                 setEmailLoaded(true);
             }
         };
-        loadEmail();
+
+        initializeSupport();
     }, []);
+
+    const fetchMessages = async (seekerId, helpProviderEmail) => {
+        setLoading(true);
+        try {
+            if (!helpProviderEmail) {
+                console.warn("Help provider email not available");
+                return;
+            }
+
+            const response = await fetch(
+                `${NODE_BACKEND_URL}/api/chat/messages?helpSeekerUserId=${seekerId}&helpProvider=${encodeURIComponent(helpProviderEmail)}&page=1`
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                setMessages(data.messages || []);
+            } else {
+                console.error("Error fetching messages:", response.status);
+            }
+        } catch (error) {
+            console.error("Error fetching messages:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const openEmojiPicker = (messageId) => {
         setPickerMessageId(messageId);
@@ -252,17 +189,57 @@ export default function Support({ currentScreen, onNavigate }) {
         }).start();
     };
 
-    const selectEmoji = (emoji) => {
-        setReactions((prev) => {
-            const current = prev[pickerMessageId];
-            if (current === emoji) {
-                const updated = { ...prev };
-                delete updated[pickerMessageId];
-                return updated;
+    const selectEmoji = async (emoji) => {
+        if (reacting) return;
+        setReacting(true);
+
+        try {
+            const cachedUser = await AsyncStorage.getItem("cachedUser");
+            const parsed = JSON.parse(cachedUser);
+            const helpProviderEmail = parsed?.user?.helpContactEmail;
+
+            if (!helpProviderEmail) {
+                console.error("Help provider email not found");
+                return;
             }
-            return { ...prev, [pickerMessageId]: emoji };
-        });
-        closePicker();
+
+            // Get the chatId first
+            const messagesResponse = await fetch(
+                `${NODE_BACKEND_URL}/api/chat/messages?helpSeekerUserId=${userId.current}&helpProvider=${encodeURIComponent(helpProviderEmail)}&page=1`
+            );
+            const messagesData = await messagesResponse.json();
+            const chatId = messagesData.chatId;
+
+            // Add the reaction
+            const response = await fetch(
+                `${NODE_BACKEND_URL}/api/chat/${chatId}/${pickerMessageId}/react`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        helpSeekerId: userId.current,
+                        emoji: emoji,
+                    }),
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                // Update the message in the list
+                setMessages((prev) =>
+                    prev.map((msg) =>
+                        msg._id === pickerMessageId ? data.data : msg
+                    )
+                );
+            } else {
+                console.error("Error adding reaction:", response.status);
+            }
+        } catch (error) {
+            console.error("Error selecting emoji:", error);
+        } finally {
+            setReacting(false);
+            closePicker();
+        }
     };
 
     const closePicker = () => {
@@ -280,20 +257,19 @@ export default function Support({ currentScreen, onNavigate }) {
         return (
             <MessageBubble
                 message={item}
-                reaction={reactions[item.id]}
                 onLongPress={openEmojiPicker}
             />
         );
     };
 
-    const processedMessages = addDateSeparators([...DUMMY_MESSAGES].reverse());
+    const processedMessages = addDateSeparators([...messages].reverse());
 
     return (
         <SafeAreaView style={[styles.safeContainer, { paddingTop: insets.top }]}>
             <Header
                 title="Help Provider"
                 titleAlignment="center"
-                subtitleText={helpEmail || ""}
+                subtitleText={helpEmail || helpProviderName}
                 subtitleColor="#52ACD7"
                 showLeftIcon={false}
                 backgroundColor="#FFFFFF"
@@ -321,16 +297,27 @@ export default function Support({ currentScreen, onNavigate }) {
                             onPress={() => onNavigate("Settings")}
                             activeOpacity={0.7}
                         >
-                            {/* <Ionicons name="settings-outline" size={scale(18)} color="#FFFFFF" style={{ marginRight: moderateScale(6) }} /> */}
                             <Text style={styles.emptyStateButtonText}>Add Help Provider</Text>
                         </TouchableOpacity>
+                    </View>
+                ) : loading ? (
+                    <View style={styles.emptyStateContainer}>
+                        <ActivityIndicator size="large" color={colors.secondary} />
+                    </View>
+                ) : messages.length === 0 ? (
+                    <View style={styles.emptyStateContainer}>
+                        <Ionicons name="chatbubble-outline" size={scale(56)} color={colors.borderLight} />
+                        <Text style={styles.emptyStateTitle}>No Messages Yet</Text>
+                        <Text style={styles.emptyStateSubtitle}>
+                            Your help provider will send you messages here. Check back soon!
+                        </Text>
                     </View>
                 ) : (
                     <>
                         <FlatList
                             data={processedMessages}
                             renderItem={renderItem}
-                            keyExtractor={(item) => item.id}
+                            keyExtractor={(item) => item.id || item._id}
                             inverted
                             contentContainerStyle={{
                                 padding: scale(12),
@@ -372,12 +359,9 @@ export default function Support({ currentScreen, onNavigate }) {
                         {EMOJI_OPTIONS.map((emoji) => (
                             <TouchableOpacity
                                 key={emoji}
-                                style={[
-                                    styles.emojiOption,
-                                    reactions[pickerMessageId] === emoji &&
-                                    styles.emojiOptionSelected,
-                                ]}
+                                style={styles.emojiOption}
                                 onPress={() => selectEmoji(emoji)}
+                                disabled={reacting}
                             >
                                 <Text style={styles.emojiText}>{emoji}</Text>
                             </TouchableOpacity>
@@ -397,16 +381,18 @@ const styles = StyleSheet.create({
     messageRow: {
         flexDirection: "row",
         alignItems: "flex-end",
-        marginBottom: moderateScale(10),
+        marginBottom: moderateScale(20),
         maxWidth: "85%",
     },
     messageBubble: {
         backgroundColor: colors.bubbleLight,
         paddingHorizontal: moderateScale(16),
         paddingVertical: moderateScale(10),
+        paddingBottom: moderateScale(14),
         borderRadius: moderateScale(20),
         borderBottomLeftRadius: moderateScale(6),
         flex: 1,
+        overflow: "visible",
     },
     messageText: {
         fontSize: moderateScale(15),
@@ -419,19 +405,26 @@ const styles = StyleSheet.create({
         marginTop: moderateScale(4),
         textAlign: "right",
     },
-    reactionBadge: {
+    reactionsContainer: {
         position: "absolute",
-        bottom: -moderateScale(14),
-        right: moderateScale(12),
-        backgroundColor: "transparent",
+        left: 0,
+        right: 0,
+        bottom: -moderateScale(13),
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        gap: moderateScale(4),
+    },
+    reactionBadge: {
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: colors.borderLight,
         borderRadius: moderateScale(12),
-        paddingHorizontal: moderateScale(6),
+        paddingHorizontal: moderateScale(7),
         paddingVertical: moderateScale(2),
-
-
     },
     reactionEmoji: {
-        fontSize: moderateScale(20),
+        fontSize: moderateScale(16),
     },
     dateSeparatorContainer: {
         flexDirection: "row",
@@ -488,9 +481,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: moderateScale(8),
         paddingVertical: moderateScale(6),
         borderRadius: moderateScale(10),
-    },
-    emojiOptionSelected: {
-        backgroundColor: "rgba(82, 172, 215, 0.15)",
     },
     emojiText: {
         fontSize: moderateScale(24),

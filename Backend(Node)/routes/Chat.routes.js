@@ -2,6 +2,7 @@ import express from "express";
 import {
     createChat,
     sendMessage,
+    addReaction,
     getMessages,
     getSeekersByProvider,
 } from "../controllers/Chat.controller.js";
@@ -12,9 +13,13 @@ const router = express.Router();
 // POST /api/chat/create
 router.post("/create", createChat);
 
-// Send a message in a chat (either party)
+// Send a message in a chat (HelpProvider only)
 // POST /api/chat/:chatId/send
 router.post("/:chatId/send", sendMessage);
+
+// Add a reaction to a message (HelpSeeker only)
+// POST /api/chat/:chatId/:messageId/react
+router.post("/:chatId/:messageId/react", addReaction);
 
 // Get paginated messages using seeker and provider IDs directly
 // GET /api/chat/messages?helpSeekerUserId=...&helpProviderId=...&page=1

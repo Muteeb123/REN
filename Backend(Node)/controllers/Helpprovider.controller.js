@@ -3,6 +3,7 @@ import HelpProvider from "../Models/HelpProvider.model.js";
 import { generateRandomPassword } from "../utils/Passwordhelper.js";
 import { sendHelpProviderCredentials } from "../utils/Emailservice.js";
 import { computeMoodStats } from "../services/moodStats.service.js";
+import { createChat } from "./Chat.controller.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INVITE HELP PROVIDER
@@ -42,12 +43,12 @@ export const inviteHelpProvider = async (req, res) => {
 
         console.log("Help seeker's provider found!", helpSeeker.helpContactEmail);
 
-        //one help seeker can only have one provider, so if they already have a provider assigned, we should not allow them to create another one. This is to prevent confusion and ensure that the help seeker has a clear point of contact for their needs.
-        if (helpSeeker.helpContactEmail) {
-            return res.status(409).json({
-                message: "You already have a help provider assigned. Only one provider is allowed per help seeker.",
-            });
-        }
+        // //one help seeker can only have one provider, so if they already have a provider assigned, we should not allow them to create another one. This is to prevent confusion and ensure that the help seeker has a clear point of contact for their needs.
+        // if (helpSeeker.helpContactEmail) {
+        //     return res.status(409).json({
+        //         message: "You already have a help provider assigned. Only one provider is allowed per help seeker.",
+        //     });
+        // }
 
         // Make sure this email isn't already registered as a User or HelpProvider
         //checking if the email entered is already registered as a user. there can be more than one provider
@@ -65,21 +66,30 @@ export const inviteHelpProvider = async (req, res) => {
 
         // ← WRAP all three in a try/catch so any failure is fully atomic
         try {
-            await sendHelpProviderCredentials(email, plainPassword);
+            ;
 
-            console.log("Email sent successfully to", email);
 
-            const helpProvider = await HelpProvider.create({
-                email: emailLower,
 
-                password: plainPassword,
-                invitedBy: helpSeekerUserId,
-            });
+            let helpProvider = await HelpProvider.findOne({ email: emailLower });
 
+            if (!helpProvider) {
+                await sendHelpProviderCredentials(email, plainPassword)
+                console.log("Email sent successfully to", email);
+                helpProvider = await HelpProvider.create({
+                    email: emailLower,
+
+                    password: plainPassword,
+                    invitedBy: helpSeekerUserId,
+                });
+            }
             await User.findByIdAndUpdate(helpSeekerUserId, {
                 helpContactEmail: emailLower,
             });
 
+            const chat = await createChat({
+                helpSeekerUserId,
+                helpProviderId: helpProvider._id.toString(),
+            });
             return res.status(201).json({
                 message: `Help provider account created. Credentials sent to ${email}.`,
                 helpProvider: {
@@ -233,36 +243,80 @@ export const updatePassword = async (req, res) => {
 export const getMoodStats = async (req, res) => {
     try {
         const { providerId } = req.params;
+
+        // Validate windowDays (1 → 90)
         const windowDays = Math.min(
             Math.max(1, parseInt(req.query.windowDays) || 30),
-            90  // cap at 90 days to keep queries fast
+            90
         );
- 
+
+        // 1️⃣ Check provider exists
         const provider = await HelpProvider.findById(providerId).lean();
         if (!provider) {
-            return res.status(404).json({ message: "Help provider not found" });
+            return res.status(404).json({
+                message: "Help provider not found",
+            });
         }
- 
-        // The seeker who invited this provider
-        const seeker = await User.findById(provider.invitedBy)
+
+        // 2️⃣ Find all seekers linked to this provider
+        const seekers = await User.find({
+            helpContactEmail: provider.email,
+        })
             .select("_id name preferredName")
             .lean();
- 
-        if (!seeker) {
-            return res.status(404).json({ message: "Associated help seeker not found" });
+
+        if (!seekers.length) {
+            return res.status(404).json({
+                message: "Associated help seeker not found",
+            });
         }
- 
-        const stats = await computeMoodStats(seeker._id.toString(), windowDays);
- 
+
+        // 3️⃣ Compute stats in parallel (FAST 🚀)
+        const stats = await Promise.all(
+            seekers.map(async (seeker) => {
+                try {
+                    const stat = await computeMoodStats(
+                        seeker._id.toString(),
+                        windowDays
+                    );
+
+                    return {
+                        seekerId: seeker._id,
+                        name: seeker.name,
+                        preferredName: seeker.preferredName,
+                        ...stat,
+                    };
+                } catch (err) {
+                    // Fail-safe: don't break whole response if one fails
+                    console.error(
+                        `Error computing stats for seeker ${seeker._id}:`,
+                        err
+                    );
+
+                    return {
+                        seekerId: seeker._id,
+                        name: seeker.name,
+                        preferredName: seeker.preferredName,
+                        error: "Failed to compute stats",
+                    };
+                }
+            })
+        );
+
+        // 4️⃣ Final response
         return res.status(200).json({
-            seeker: {
-                id:   seeker._id,
-                name: seeker.preferredName || seeker.name,
-            },
+            totalSeekers: stats.length,
+            windowDays,
+            generatedAt: new Date(),
             stats,
         });
+
     } catch (error) {
         console.error("Get Mood Stats Error:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+
+        return res.status(500).json({
+            message: "Server error",
+            error: error.message,
+        });
     }
 };

@@ -28,6 +28,7 @@ export const createChat = async (req, res) => {
         if (!seeker) {
             return res.status(404).json({ message: "Help seeker not found" });
         }
+
         if (!provider) {
             return res.status(404).json({ message: "Help provider not found" });
         }
@@ -70,26 +71,20 @@ export const createChat = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SEND MESSAGE
-// Either party sends a message into the shared chat.
+// SEND MESSAGE (HelpProvider only)
+// Only HelpProvider can send messages to help seekers.
 //
 // POST /api/chat/:chatId/send
-// Body: { senderId, senderModel ("User" | "HelpProvider"), text }
+// Body: { senderId (HelpProvider ID), text }
 // ─────────────────────────────────────────────────────────────────────────────
 export const sendMessage = async (req, res) => {
     try {
         const { chatId } = req.params;
-        const { senderId, senderModel, text } = req.body;
+        const { senderId, text } = req.body;
 
-        if (!senderId || !senderModel || !text?.trim()) {
+        if (!senderId || !text?.trim()) {
             return res.status(400).json({
-                message: "senderId, senderModel, and text are required",
-            });
-        }
-
-        if (!["User", "HelpProvider"].includes(senderModel)) {
-            return res.status(400).json({
-                message: 'senderModel must be "User" or "HelpProvider"',
+                message: "senderId and text are required",
             });
         }
 
@@ -98,17 +93,16 @@ export const sendMessage = async (req, res) => {
             return res.status(404).json({ message: "Chat not found" });
         }
 
-        const seekerIdStr = chat.helpSeekerId.toString();
         const providerIdStr = chat.helpProviderId.toString();
 
-        if (senderModel === "User" && seekerIdStr !== senderId) {
-            return res.status(403).json({ message: "Sender is not part of this chat" });
-        }
-        if (senderModel === "HelpProvider" && providerIdStr !== senderId) {
-            return res.status(403).json({ message: "Sender is not part of this chat" });
+        // Only HelpProvider can send messages
+        if (providerIdStr !== senderId) {
+            return res.status(403).json({
+                message: "Only the help provider can send messages in this chat",
+            });
         }
 
-        chat.messages.push({ senderModel, senderId, text: text.trim() });
+        chat.messages.push({ senderId, text: text.trim() });
         await chat.save();
 
         const savedMessage = chat.messages[chat.messages.length - 1];
@@ -124,22 +118,107 @@ export const sendMessage = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ADD REACTION (HelpSeeker only)
+// Help seeker reacts to a message with an emoji.
+//
+// POST /api/chat/:chatId/:messageId/react
+// Body: { helpSeekerId, emoji }
+// Valid emojis: "❤️", "👍", "😊", "🙏", "😢", "😮"
+// ─────────────────────────────────────────────────────────────────────────────
+export const addReaction = async (req, res) => {
+    try {
+        const { chatId, messageId } = req.params;
+        const { helpSeekerId, emoji } = req.body;
+
+        if (!helpSeekerId || !emoji) {
+            return res.status(400).json({
+                message: "helpSeekerId and emoji are required",
+            });
+        }
+
+        const validEmojis = ["❤️", "👍", "😊", "🙏", "😢", "😮"];
+        if (!validEmojis.includes(emoji)) {
+            return res.status(400).json({
+                message: `Invalid emoji. Valid emojis are: ${validEmojis.join(", ")}`,
+            });
+        }
+
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ message: "Chat not found" });
+        }
+
+        // Verify that the user is the help seeker in this chat
+        if (chat.helpSeekerId.toString() !== helpSeekerId) {
+            return res.status(403).json({
+                message: "Only the help seeker can react to messages",
+            });
+        }
+
+        // Find the message
+        const message = chat.messages.id(messageId);
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" });
+        }
+
+        // Check if user already reacted with this emoji, if so remove it (toggle behavior)
+        const existingReactionIndex = message.reactions.findIndex(
+            (r) =>
+                r.helpSeekerId.toString() === helpSeekerId && r.emoji === emoji
+        );
+
+        if (existingReactionIndex > -1) {
+            // Remove existing reaction (toggle off)
+            message.reactions.splice(existingReactionIndex, 1);
+        } else {
+            // Add new reaction
+            message.reactions.push({ helpSeekerId, emoji });
+        }
+
+        await chat.save();
+
+        res.status(200).json({
+            message: existingReactionIndex > -1 ? "Reaction removed" : "Reaction added",
+            data: message,
+        });
+    } catch (error) {
+        console.error("Add Reaction Error:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET MESSAGES (paginated)
 // Finds the chat by (helpSeekerId, helpProviderId) pair and returns
-// paginated messages — no need to know the chatId upfront.
+// paginated messages with reactions — no need to know the chatId upfront.
 //
 // GET /api/chat/messages?helpSeekerUserId=...&helpProviderId=...&page=1
 // ─────────────────────────────────────────────────────────────────────────────
 export const getMessages = async (req, res) => {
     try {
-        const { helpSeekerUserId, helpProviderId, page: pageQuery } = req.query;
+        const {
+            helpSeekerUserId,
+            helpProviderId: helpProviderIdQuery,
+            helpProvider,
+            page: pageQuery,
+        } = req.query;
         const page = Math.max(1, parseInt(pageQuery) || 1);
         const PAGE_SIZE = 10;
 
-        if (!helpSeekerUserId || !helpProviderId) {
+        if (!helpSeekerUserId || (!helpProviderIdQuery && !helpProvider)) {
             return res.status(400).json({
-                message: "helpSeekerUserId and helpProviderId query params are required",
+                message: "helpSeekerUserId and either helpProviderId or helpProvider are required",
             });
+        }
+
+        let helpProviderId = helpProviderIdQuery;
+
+        if (!helpProviderId) {
+            const provider = await HelpProvider.findOne({ email: helpProvider }).select("_id");
+            if (!provider) {
+                return res.status(404).json({ message: "Help provider not found" });
+            }
+            helpProviderId = provider._id;
         }
 
         const chat = await Chat.findOne({

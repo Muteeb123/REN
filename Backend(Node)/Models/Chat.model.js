@@ -1,21 +1,39 @@
 import mongoose from "mongoose";
 
-const messageSchema = new mongoose.Schema(
+const reactionSchema = new mongoose.Schema(
     {
-        senderModel: {
+        helpSeekerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+        emoji: {
             type: String,
             required: true,
-            enum: ["User", "HelpProvider"],
+            enum: ["❤️", "👍", "😊", "🙏", "😢", "😮"],
         },
+    },
+    {
+        timestamps: true,
+        _id: false,
+    }
+);
+
+const messageSchema = new mongoose.Schema(
+    {
         senderId: {
             type: mongoose.Schema.Types.ObjectId,
+            ref: "HelpProvider",
             required: true,
-            refPath: "messages.senderModel",
         },
         text: {
             type: String,
             required: [true, "Message text is required"],
             trim: true,
+        },
+        reactions: {
+            type: [reactionSchema],
+            default: [],
         },
     },
     {
