@@ -10,7 +10,7 @@ load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 print(f"Loaded Gemini API Key: {API_KEY[:5]}...")
 client = genai.Client(api_key=API_KEY)
-MODEL_NAME = "gemma-3-27b-it"
+MODEL_NAME = "gemma-4-31b-it"
 
 BASE_SYSTEM_PROMPT = (
     "You are REN (Reflective Emotion Navigator), an empathetic and supportive "
