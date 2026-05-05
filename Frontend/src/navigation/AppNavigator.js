@@ -113,11 +113,20 @@ export default function AppNavigator() {
             try {
                 const cachedData = await AsyncStorage.getItem("cachedUser");
                 if (cachedData) {
-                    const { user, timestamp } = JSON.parse(cachedData);
+                    const { user, timestamp, accountType } = JSON.parse(cachedData);
                     const oneMonth = 30 * 24 * 60 * 60 * 1000;
                     if (Date.now() - timestamp < oneMonth) {
-                        await AsyncStorage.setItem("userId", user._id);
-                        setInitialRoute(user.personalized ? "MainTabs" : "Personalization");
+                        const userId = user?._id || user?.id;
+                        if (userId) {
+                            await AsyncStorage.setItem("userId", userId);
+                        }
+
+                        if (accountType === "helpProvider") {
+                            setInitialRoute("HelpProviderDashboard");
+                            return;
+                        }
+
+                        setInitialRoute(user?.personalized ? "MainTabs" : "Personalization");
                         return;
                     }
                     await AsyncStorage.removeItem("cachedUser");

@@ -306,7 +306,7 @@ export default function Support({ currentScreen, onNavigate }) {
                     </View>
                 ) : messages.length === 0 ? (
                     <View style={styles.emptyStateContainer}>
-                        <Ionicons name="chatbubble-outline" size={scale(56)} color={colors.borderLight} />
+                        <Ionicons name="chatbubble-outline" size={scale(56)} color={colors.secondary} style={{ marginBottom: 16, opacity: 0.6 }} />
                         <Text style={styles.emptyStateTitle}>No Messages Yet</Text>
                         <Text style={styles.emptyStateSubtitle}>
                             Your help provider will send you messages here. Check back soon!

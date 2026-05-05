@@ -117,15 +117,7 @@ export default function Journal({ currentScreen, onNavigate }) {
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editingEntry, setEditingEntry] = useState(null);
 
-    const [entries, setEntries] = useState([
-        {
-            id: 1,
-            title: "A Productive Day",
-            text: "Had a really productive day today, feeling satisfied with my progress!",
-            mood: moods[0],
-            date: "Oct 13, 2025 6:45 PM",
-        },
-    ]);
+    const [entries, setEntries] = useState([]);
 
     const [loadingFetch, setLoadingFetch] = useState(false);
     const [loadingSave, setLoadingSave] = useState(false);
@@ -377,6 +369,15 @@ export default function Journal({ currentScreen, onNavigate }) {
                 {loadingFetch ? (
                     <View style={styles.centered}>
                         <ActivityIndicator size="large" />
+                    </View>
+                ) : entries.length === 0 ? (
+                    <View style={styles.emptyStateContainer}>
+                        <Ionicons name="book-outline" size={scale(56)} color={colors.secondary} style={{ marginBottom: 16, opacity: 0.6 }} />
+                        <Text style={styles.emptyStateTitle}>No Journals Yet</Text>
+                        <Text style={styles.emptyStateSubtitle}>
+                            Start writing a journal to capture your thoughts and track how you feel every day.
+                        </Text>
+
                     </View>
                 ) : (
                     <ScrollView
@@ -718,6 +719,39 @@ const styles = StyleSheet.create({
     moodTitle: { fontSize: 18, fontWeight: "600", marginLeft: 6 },
 
     centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+    emptyStateContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: moderateScale(28),
+        paddingVertical: moderateScale(24),
+    },
+    emptyStateTitle: {
+        fontSize: moderateScale(22),
+        fontWeight: "800",
+        color: colors.textDark,
+        textAlign: "center",
+        marginBottom: moderateScale(8),
+    },
+    emptyStateSubtitle: {
+        fontSize: moderateScale(14),
+        color: colors.textLight,
+        textAlign: "center",
+        marginTop: moderateScale(8),
+        lineHeight: moderateScale(20),
+    },
+    emptyStateButton: {
+        backgroundColor: colors.secondary,
+        paddingHorizontal: moderateScale(24),
+        paddingVertical: moderateScale(12),
+        borderRadius: moderateScale(12),
+        marginTop: moderateScale(24),
+    },
+    emptyStateButtonText: {
+        color: "#FFFFFF",
+        fontSize: moderateScale(15),
+        fontWeight: "600",
+    },
 
     moodFloatingContainer: {
         position: "absolute",

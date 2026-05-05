@@ -490,11 +490,11 @@ export default function Settings() {
                         </View >
                     </View >
                 </View >
-
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Text style={styles.logoutButtonText}>Log Out</Text>
-                </TouchableOpacity>
             </KeyboardAvoidingView >
+
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Text style={styles.logoutButtonText}>Log Out</Text>
+            </TouchableOpacity>
         </SafeAreaView >
     );
 }
@@ -508,9 +508,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingHorizontal: moderateScale(20),
-
         paddingBottom: verticalScale(10),
-        justifyContent: "space-between",
     },
     content: {
         flexGrow: 1,
@@ -560,7 +558,8 @@ const styles = StyleSheet.create({
         borderRadius: moderateScale(12),
         paddingVertical: verticalScale(12),
         alignItems: "center",
-        marginBottom: verticalScale(6),
+        marginHorizontal: moderateScale(20),
+        marginBottom: verticalScale(12),
     },
     logoutButtonText: {
         color: colors.dangerText,

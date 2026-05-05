@@ -18,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
+import { Ionicons } from "@expo/vector-icons";
 import { NODE_BACKEND_URL } from "../config/urls";
 
 // Colors
@@ -44,6 +45,9 @@ const LoginScreen = () => {
     const [password, setPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Error and user tracking
     const [error, setError] = useState("");
@@ -142,6 +146,7 @@ const LoginScreen = () => {
             const cachedData = {
                 user: data.helpProvider || data,
                 timestamp: Date.now(),
+                accountType: "helpProvider",
             };
 
             await AsyncStorage.setItem("userId", data.helpProvider?.id || data.id);
@@ -232,6 +237,7 @@ const LoginScreen = () => {
         animateModeChange("helpProvider", () => {
             setEmail("");
             setPassword("");
+            setShowPassword(false);
             setError("");
         });
     };
@@ -242,6 +248,9 @@ const LoginScreen = () => {
             setPassword("");
             setNewPassword("");
             setConfirmPassword("");
+            setShowPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
             setError("");
             setCurrentUserId(null);
         });
@@ -352,15 +361,28 @@ const LoginScreen = () => {
                 autoCapitalize="none"
             />
 
-            <TextInput
-                style={[styles.input, error ? { borderColor: colors.error } : {}]}
-                placeholder="Password"
-                placeholderTextColor={colors.textPlaceholder}
-                value={password}
-                onChangeText={setPassword}
-                editable={!isLoading}
-                secureTextEntry={true}
-            />
+            <View style={[styles.passwordInputContainer, error ? { borderColor: colors.error } : {}]}>
+                <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Password"
+                    placeholderTextColor={colors.textPlaceholder}
+                    value={password}
+                    onChangeText={setPassword}
+                    editable={!isLoading}
+                    secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                    onPress={() => setShowPassword((prev) => !prev)}
+                    disabled={isLoading}
+                    style={styles.eyeButton}
+                >
+                    <Ionicons
+                        name={showPassword ? "eye-off" : "eye"}
+                        size={20}
+                        color={colors.textPlaceholder}
+                    />
+                </TouchableOpacity>
+            </View>
 
             {isLoading ? (
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
@@ -398,25 +420,51 @@ const LoginScreen = () => {
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <TextInput
-                style={[styles.input, error ? { borderColor: colors.error } : {}]}
-                placeholder="New Password (min 6 characters)"
-                placeholderTextColor={colors.textPlaceholder}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                editable={!isLoading}
-                secureTextEntry={true}
-            />
+            <View style={[styles.passwordInputContainer, error ? { borderColor: colors.error } : {}]}>
+                <TextInput
+                    style={styles.passwordInput}
+                    placeholder="New Password (min 6 characters)"
+                    placeholderTextColor={colors.textPlaceholder}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    editable={!isLoading}
+                    secureTextEntry={!showNewPassword}
+                />
+                <TouchableOpacity
+                    onPress={() => setShowNewPassword((prev) => !prev)}
+                    disabled={isLoading}
+                    style={styles.eyeButton}
+                >
+                    <Ionicons
+                        name={showNewPassword ? "eye-off" : "eye"}
+                        size={20}
+                        color={colors.textPlaceholder}
+                    />
+                </TouchableOpacity>
+            </View>
 
-            <TextInput
-                style={[styles.input, error ? { borderColor: colors.error } : {}]}
-                placeholder="Confirm Password"
-                placeholderTextColor={colors.textPlaceholder}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                editable={!isLoading}
-                secureTextEntry={true}
-            />
+            <View style={[styles.passwordInputContainer, error ? { borderColor: colors.error } : {}]}>
+                <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Confirm Password"
+                    placeholderTextColor={colors.textPlaceholder}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    editable={!isLoading}
+                    secureTextEntry={!showConfirmPassword}
+                />
+                <TouchableOpacity
+                    onPress={() => setShowConfirmPassword((prev) => !prev)}
+                    disabled={isLoading}
+                    style={styles.eyeButton}
+                >
+                    <Ionicons
+                        name={showConfirmPassword ? "eye-off" : "eye"}
+                        size={20}
+                        color={colors.textPlaceholder}
+                    />
+                </TouchableOpacity>
+            </View>
 
             {isLoading ? (
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
@@ -527,6 +575,27 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.secondary,
         backgroundColor: "#F9F9F9",
+    },
+    passwordInputContainer: {
+        width: "90%",
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 12,
+        marginBottom: 15,
+        backgroundColor: "#F9F9F9",
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    passwordInput: {
+        flex: 1,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        fontSize: 14,
+        color: colors.secondary,
+    },
+    eyeButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 10,
     },
     pbutton: {
         width: "90%",
