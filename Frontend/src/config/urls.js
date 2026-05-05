@@ -1,4 +1,5 @@
-export const NODE_BACKEND_URL = "https://johnson-fighting-semester-materials.trycloudflare.com";
+export const NODE_BACKEND_URL = "https://scratch-stating-sit-scheme.trycloudflare.com"
+
 export const PYTHON_BACKEND_URL = "https://namely-finer-seasnail.ngrok-free.app";
 
 export const REDDIT_AUTH_ENDPOINT = "https://www.reddit.com/api/v1/authorize";

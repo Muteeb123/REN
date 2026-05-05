@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     SafeAreaView,
     View,
@@ -6,12 +6,21 @@ import {
     StyleSheet,
     Dimensions,
     ScrollView,
-    TouchableOpacity,
+    ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Header from "../components/Header";
+import EmotionBreakdownChart from "../components/EmotionBreakdownChart";
+import PolarityDonutChart from "../components/PolarityDonutChart";
+import DailyMoodTrendChart from "../components/DailyMoodTrendChart";
+import VolatilityGauge from "../components/VolatilityGauge";
+import DistressCalendarHeatmap from "../components/DistressCalendarHeatmap";
+import ConsecutiveDistressCard from "../components/ConsecutiveDistressCard";
+import WeeklySnapshotCard from "../components/WeeklySnapshotCard";
+import { adaptMoodStats } from "../utils/moodStatsAdapter";
+import { NODE_BACKEND_URL } from "../config/urls";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 375;
@@ -192,289 +201,16 @@ const getEmotionColor = (emotion) => {
     return colors.neutral;
 };
 
-// ===== HORIZONTAL BAR CHART =====
-const HorizontalBarChart = ({ data }) => {
-    const sortedData = [...data].sort((a, b) => b.percentage - a.percentage);
-    const maxPercentage = Math.max(...sortedData.map((d) => d.percentage));
-
-    return (
-        <View style={styles.chartContainer}>
-            {sortedData.map((item, idx) => (
-                <View key={idx} style={styles.barRow}>
-                    <View style={styles.emotionLabel}>
-                        <Text style={styles.barEmoji}>{getEmotionEmoji(item.emotion)}</Text>
-                        <Text style={styles.barEmotionName}>{item.emotion}</Text>
-                    </View>
-                    <View style={styles.barWrapper}>
-                        <LinearGradient
-                            colors={[
-                                getEmotionColor(item.emotion),
-                                getEmotionColor(item.emotion) + "80",
-                            ]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={[
-                                styles.emotionBar,
-                                {
-                                    width: `${(item.percentage / maxPercentage) * 100}%`,
-                                    opacity: 0.3 + item.avgScore * 0.7,
-                                },
-                            ]}
-                        />
-                    </View>
-                    <View style={styles.barStats}>
-                        <Text style={styles.barPercentage}>{item.percentage}%</Text>
-                        <Text style={styles.barConfidence}>{item.count}</Text>
-                    </View>
-                </View>
-            ))}
-        </View>
-    );
+const getVolatilityLabel = (score) => {
+    if (score >= 0.66) return "high";
+    if (score >= 0.33) return "moderate";
+    return "low";
 };
 
-// ===== DONUT CHART =====
-const DonutChart = ({ positive, negative, neutral }) => {
-    const total = positive + negative + neutral;
-    const positivePercent = (positive / total) * 100;
-    const negativePercent = (negative / total) * 100;
-    const neutralPercent = (neutral / total) * 100;
-
-    const donutSize = scale(160);
-    const donutThickness = scale(20);
-    const innerRadius = (donutSize - donutThickness) / 2;
-    const outerRadius = donutSize / 2;
-
-    return (
-        <View style={styles.donutContainer}>
-            <View style={styles.donutChart}>
-                {/* Circular Donut Background */}
-                <View style={[styles.donutCircle, { width: donutSize, height: donutSize }]}>
-                    {/* Positive Segment */}
-                    <View
-                        style={[
-                            styles.donutSegmentCircle,
-                            {
-                                width: donutSize,
-                                height: donutSize,
-                                borderRadius: donutSize / 2,
-                                borderWidth: donutThickness,
-                                borderColor: colors.success,
-                                borderRightColor: "transparent",
-                                borderBottomColor: "transparent",
-                                transform: [{ rotate: "0deg" }],
-                            },
-                        ]}
-                    />
-                    {/* Negative Segment */}
-                    <View
-                        style={[
-                            styles.donutSegmentCircle,
-                            {
-                                width: donutSize,
-                                height: donutSize,
-                                borderRadius: donutSize / 2,
-                                borderWidth: donutThickness,
-                                borderColor: colors.danger,
-                                borderRightColor: "transparent",
-                                borderBottomColor: "transparent",
-                                transform: [{ rotate: `${positivePercent * 3.6}deg` }],
-                            },
-                        ]}
-                    />
-                    {/* Neutral Segment */}
-                    <View
-                        style={[
-                            styles.donutSegmentCircle,
-                            {
-                                width: donutSize,
-                                height: donutSize,
-                                borderRadius: donutSize / 2,
-                                borderWidth: donutThickness,
-                                borderColor: colors.neutral,
-                                borderRightColor: "transparent",
-                                borderBottomColor: "transparent",
-                                transform: [
-                                    { rotate: `${(positivePercent + negativePercent) * 3.6}deg` },
-                                ],
-                            },
-                        ]}
-                    />
-
-                    {/* Center Circle */}
-                    <View
-                        style={[
-                            styles.donutCenter,
-                            {
-                                width: donutSize - donutThickness * 2,
-                                height: donutSize - donutThickness * 2,
-                            },
-                        ]}
-                    >
-                        <Text style={styles.donutCenterValue}>{total}</Text>
-                        <Text style={styles.donutCenterLabel}>Posts</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* Legend */}
-            <View style={styles.donutLegend}>
-                <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.legendLabel}>Positive</Text>
-                        <Text style={styles.legendValue}>{positive} ({positivePercent.toFixed(0)}%)</Text>
-                    </View>
-                </View>
-                <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: colors.danger }]} />
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.legendLabel}>Negative</Text>
-                        <Text style={styles.legendValue}>{negative} ({negativePercent.toFixed(0)}%)</Text>
-                    </View>
-                </View>
-                <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: colors.neutral }]} />
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.legendLabel}>Neutral</Text>
-                        <Text style={styles.legendValue}>{neutral} ({neutralPercent.toFixed(0)}%)</Text>
-                    </View>
-                </View>
-            </View>
-        </View>
-    );
-};
-
-// ===== GAUGE CHART =====
-const GaugeChart = ({ score, label }) => {
-    const getGaugeColor = () => {
-        if (label === "high") return colors.danger;
-        if (label === "moderate") return colors.warning;
-        return colors.success;
-    };
-
-    return (
-        <View style={styles.gaugeContainer}>
-            <LinearGradient
-                colors={[colors.success, colors.warning, colors.danger]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gaugeBar}
-            />
-            <View style={styles.gaugeLabels}>
-                <Text style={styles.gaugeLabel}>Low</Text>
-                <Text style={styles.gaugeLabel}>High</Text>
-            </View>
-            <View style={[styles.gaugePointer, { left: `${score * 100}%` }]}>
-                <Ionicons name="caret-down" size={scale(20)} color={getGaugeColor()} />
-            </View>
-            <View style={styles.gaugeValue}>
-                <Text style={[styles.gaugeValueText, { color: getGaugeColor() }]}>
-                    {score.toFixed(2)}
-                </Text>
-                <Text style={styles.gaugeLabelText}>{label}</Text>
-            </View>
-        </View>
-    );
-};
-
-// ===== CALENDAR HEATMAP =====
-const CalendarHeatmap = ({ distressDays, allDays }) => {
-    const weeks = [];
-    for (let i = 0; i < allDays.length; i += 7) {
-        weeks.push(allDays.slice(i, i + 7));
-    }
-
-    return (
-        <View style={styles.heatmapContainer}>
-            {weeks.map((week, weekIdx) => (
-                <View key={weekIdx} style={styles.heatmapWeek}>
-                    {week.map((day, dayIdx) => {
-                        const isDistress = distressDays.includes(day.dateStr);
-
-                        return (
-                            <View
-                                key={dayIdx}
-                                style={[
-                                    styles.heatmapDay,
-                                    {
-                                        backgroundColor: isDistress ? colors.danger : "#E8E8E8",
-                                    },
-                                ]}
-                            >
-                                <Text style={styles.heatmapDayText}>{day.date}</Text>
-                            </View>
-                        );
-                    })}
-                </View>
-            ))}
-            <View style={styles.heatmapLegend}>
-                <View style={styles.heatmapLegendItem}>
-                    <View
-                        style={[styles.heatmapLegendDot, { backgroundColor: "#E8E8E8" }]}
-                    />
-                    <Text style={styles.heatmapLegendText}>Normal</Text>
-                </View>
-                <View style={styles.heatmapLegendItem}>
-                    <View
-                        style={[styles.heatmapLegendDot, { backgroundColor: colors.danger }]}
-                    />
-                    <Text style={styles.heatmapLegendText}>Distress</Text>
-                </View>
-            </View>
-        </View>
-    );
-};
-
-// ===== HIGHLIGHTED METRIC CARD =====
-const HighlightedMetricCard = ({ icon, label, value, color, subtitle }) => (
-    <LinearGradient
-        colors={[color + "15", color + "08"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.highlightedCard}
-    >
-        <View style={styles.highlightedHeader}>
-            <View style={[styles.highlightedIconBg, { backgroundColor: color + "25" }]}>
-                <MaterialIcons name={icon} size={scale(24)} color={color} />
-            </View>
-            <Text style={styles.highlightedLabel}>{label}</Text>
-        </View>
-        <Text style={[styles.highlightedValue, { color }]}>{value}</Text>
-        {subtitle && <Text style={styles.highlightedSubtitle}>{subtitle}</Text>}
-    </LinearGradient>
-);
-
-// ===== 7-DAY SNAPSHOT CARD =====
-const SnapshotCard = ({ total, positive, negative }) => (
-    <LinearGradient
-        colors={[colors.primaryLight, colors.background]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.snapshotCardStyle}
-    >
-        <View style={styles.snapshotHeader}>
-            <Text style={styles.snapshotTitle}>Weekly Summary</Text>
-            <Ionicons name="trending-up" size={scale(20)} color={colors.success} />
-        </View>
-        <View style={styles.snapshotContent}>
-            <View style={styles.snapshotMini}>
-                <Text style={styles.snapshotMiniValue}>{total}</Text>
-                <Text style={styles.snapshotMiniLabel}>Posts</Text>
-            </View>
-            <View style={styles.snapshotMini}>
-                <Text style={[styles.snapshotMiniValue, { color: colors.success }]}>
-                    {positive}%
-                </Text>
-                <Text style={styles.snapshotMiniLabel}>Positive</Text>
-            </View>
-            <View style={styles.snapshotMini}>
-                <Text style={[styles.snapshotMiniValue, { color: colors.danger }]}>
-                    {negative}%
-                </Text>
-                <Text style={styles.snapshotMiniLabel}>Negative</Text>
-            </View>
-        </View>
-    </LinearGradient>
+const LoadingCard = ({ height = 120 }) => (
+    <View style={[styles.loadingCard, { height }]}>
+        <ActivityIndicator size="small" color={colors.primary} />
+    </View>
 );
 
 // ===== CURRENT AGGREGATION CARD =====
@@ -529,24 +265,53 @@ const AggregationCard = ({ data }) => (
     </LinearGradient>
 );
 
-export default function HelpProviderStatistics({ navigation }) {
+export default function HelpProviderStatistics({ navigation, route }) {
     const insets = useSafeAreaInsets();
-    const stats = DUMMY_MOOD_STATS.stats;
-    const seeker = DUMMY_MOOD_STATS.seeker;
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [windowDays, setWindowDays] = useState(30);
 
-    // Generate calendar days
-    const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Extract providerId from route params or use fallback
+    const providerId = route?.params?.providerId || "69fa159dd25168d71224fb14";
 
-    const allDays = [];
-    for (let d = new Date(thirtyDaysAgo); d <= today; d.setDate(d.getDate() + 1)) {
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        allDays.push({
-            date: d.getDate(),
-            dateStr: dateStr,
-        });
-    }
+    useEffect(() => {
+        const fetchMoodStats = async () => {
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const url = `${NODE_BACKEND_URL}/api/helpprovider/mood-stats/${providerId}`;
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                if (!data.stats || data.stats.length === 0) {
+                    throw new Error("No stats data available");
+                }
+
+                // Extract first seeker's stats and adapt them
+                const firstSeekerStat = data.stats[0];
+                const adaptedStats = adaptMoodStats(firstSeekerStat);
+
+                setStats(adaptedStats);
+                setWindowDays(data.windowDays || 30);
+                setError(null);
+            } catch (err) {
+                console.error("Mood Stats Fetch Error:", err.message);
+                setError(err.message || "Failed to load mood statistics");
+                setStats(null);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchMoodStats();
+    }, [providerId]);
 
     return (
         <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
@@ -568,131 +333,153 @@ export default function HelpProviderStatistics({ navigation }) {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
-                <View style={styles.headerSection}>
-                    <Text style={styles.seekerName}>{seeker.name}</Text>
-                    <Text style={styles.period}>Last {stats.windowDays} days analysis</Text>
-                </View>
+                {error ? (
+                    <View style={styles.errorContainer}>
+                        <MaterialIcons name="error-outline" size={40} color={colors.danger} />
+                        <Text style={styles.errorTitle}>Unable to Load Statistics</Text>
+                        <Text style={styles.errorMessage}>{error}</Text>
+                    </View>
+                ) : stats ? (
+                    <View style={styles.headerSection}>
+                        <Text style={styles.seekerName}>{stats.displayName}</Text>
+                        <Text style={styles.period}>
+                            Last {windowDays} days analysis
+                        </Text>
+                    </View>
+                ) : (
+                    <View style={styles.headerSection}>
+                        <View style={styles.loadingPlaceholder} />
+                        <View style={[styles.loadingPlaceholder, { width: "60%", marginTop: 8 }]} />
+                    </View>
+                )}
 
-                {/* Longest Consecutive Distress - Highlighted */}
-                <HighlightedMetricCard
-                    icon="warning"
-                    label="Crisis Signal"
-                    value={`${stats.summary.longestConsecutiveDistress} days`}
-                    color={colors.danger}
-                    subtitle="Consecutive distress streak"
-                />
+                {/* Top: Metric Cards */}
+                {!error && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Key Metrics</Text>
+                        {isLoading || !stats ? (
+                            <View style={styles.metricGrid}>
+                                <View style={styles.metricCardWrap}>
+                                    <LoadingCard height={130} />
+                                </View>
+                                <View style={styles.metricCardWrap}>
+                                    <LoadingCard height={130} />
+                                </View>
+                            </View>
+                        ) : (
+                            <View style={styles.metricGrid}>
+                                <View style={styles.metricCardWrap}>
+                                    <ConsecutiveDistressCard
+                                        longestConsecutiveDistress={stats.longestConsecutiveDistress}
+                                    />
+                                </View>
+                                <View style={styles.metricCardWrap}>
+                                    <WeeklySnapshotCard
+                                        totalPosts={stats.weekSnapshot.totalPosts}
+                                        positivePercentage={stats.weekSnapshot.positivePercentage}
+                                        negativePercentage={stats.weekSnapshot.negativePercentage}
+                                    />
+                                </View>
+                            </View>
+                        )}
+                    </View>
+                )}
 
-                {/* Emotion Breakdown - Horizontal Bar Chart */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Emotion Distribution</Text>
-                    <LinearGradient
-                        colors={["#FAFAFA", colors.background]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.chartCard}
-                    >
-                        <HorizontalBarChart data={stats.emotionBreakdown} />
-                    </LinearGradient>
-                </View>
-
-                {/* Polarity Split - Donut Chart */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Mood Composition</Text>
-                    <LinearGradient
-                        colors={["#FAFAFA", colors.background]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.chartCard}
-                    >
-                        <DonutChart
-                            positive={stats.polaritySplit.positive.count}
-                            negative={stats.polaritySplit.negative.count}
-                            neutral={stats.polaritySplit.neutral.count}
-                        />
-                    </LinearGradient>
-                </View>
-
-                {/* Daily Mood Trend */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Daily Mood Trend</Text>
-                    <LinearGradient
-                        colors={["#FAFAFA", colors.background]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.chartCard}
-                    >
-                        <View style={styles.trendGrid}>
-                            {stats.dailyTrend.map((day, idx) => {
-                                const isDistress = day.dominant === "negative";
-                                return (
-                                    <View key={idx} style={styles.trendColumn}>
-                                        <View style={styles.trendDot}>
-                                            <View
-                                                style={[
-                                                    styles.trendDotInner,
-                                                    {
-                                                        backgroundColor: isDistress
-                                                            ? colors.danger
-                                                            : day.dominant === "positive"
-                                                                ? colors.success
-                                                                : colors.neutral,
-                                                    },
-                                                ]}
-                                            />
-                                        </View>
-                                        <Text style={styles.trendDate}>
-                                            {new Date(day.date).getDate()}
-                                        </Text>
-                                    </View>
-                                );
-                            })}
+                {/* Middle: Emotion + Polarity */}
+                {!error && (
+                    <>
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Emotion Distribution</Text>
+                            <LinearGradient
+                                colors={["#FAFAFA", colors.background]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.chartCard}
+                            >
+                                {isLoading || !stats ? (
+                                    <LoadingCard height={190} />
+                                ) : (
+                                    <EmotionBreakdownChart emotionBreakdown={stats.emotionBreakdown} />
+                                )}
+                            </LinearGradient>
                         </View>
-                    </LinearGradient>
-                </View>
 
-                {/* Volatility Score - Gauge */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Mood Volatility</Text>
-                    <LinearGradient
-                        colors={["#FAFAFA", colors.background]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.chartCard}
-                    >
-                        <GaugeChart
-                            score={stats.summary.volatility.score}
-                            label={stats.summary.volatility.label}
-                        />
-                    </LinearGradient>
-                </View>
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Mood Composition</Text>
+                            <LinearGradient
+                                colors={["#FAFAFA", colors.background]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.chartCard}
+                            >
+                                {isLoading || !stats ? (
+                                    <LoadingCard height={210} />
+                                ) : (
+                                    <PolarityDonutChart polaritySplit={stats.polaritySplit} />
+                                )}
+                            </LinearGradient>
+                        </View>
+                    </>
+                )}
 
-                {/* Distress Days Calendar Heatmap */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Distress Calendar</Text>
-                    <LinearGradient
-                        colors={["#FAFAFA", colors.background]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.chartCard}
-                    >
-                        <CalendarHeatmap
-                            distressDays={stats.distressDays}
-                            allDays={allDays}
-                        />
-                    </LinearGradient>
-                </View>
+                {/* Bottom: Trend + Calendar + Gauge */}
+                {!error && (
+                    <>
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Daily Mood Trend</Text>
+                            <LinearGradient
+                                colors={["#FAFAFA", colors.background]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.chartCard}
+                            >
+                                {isLoading || !stats ? (
+                                    <LoadingCard height={220} />
+                                ) : (
+                                    <DailyMoodTrendChart dailyTrend={stats.dailyTrend} />
+                                )}
+                            </LinearGradient>
+                        </View>
 
-                {/* 7-Day Snapshot */}
-                <View style={styles.section}>
-                    <SnapshotCard
-                        total={stats.weekSnapshot.totalPosts}
-                        positive={stats.weekSnapshot.positivePercentage}
-                        negative={stats.weekSnapshot.negativePercentage}
-                    />
-                </View>
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Distress Calendar</Text>
+                            <LinearGradient
+                                colors={["#FAFAFA", colors.background]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.chartCard}
+                            >
+                                {isLoading || !stats ? (
+                                    <LoadingCard height={190} />
+                                ) : (
+                                    <DistressCalendarHeatmap distressDays={stats.distressDays} />
+                                )}
+                            </LinearGradient>
+                        </View>
+
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Mood Volatility</Text>
+                            <LinearGradient
+                                colors={["#FAFAFA", colors.background]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.chartCard}
+                            >
+                                {isLoading || !stats ? (
+                                    <LoadingCard height={180} />
+                                ) : (
+                                    <VolatilityGauge
+                                        score={stats.volatilityScore}
+                                        label={getVolatilityLabel(stats.volatilityScore)}
+                                    />
+                                )}
+                            </LinearGradient>
+                        </View>
+                    </>
+                )}
 
                 {/* Current Aggregation */}
-                {stats.currentAggregation && (
+                {!error && stats?.currentAggregation && (
                     <View style={styles.section}>
                         <AggregationCard data={stats.currentAggregation} />
                     </View>
@@ -746,278 +533,49 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.borderLight,
     },
-
-    // ===== HORIZONTAL BAR CHART =====
-    chartContainer: {
-        gap: verticalScale(12),
-    },
-    barRow: {
+    metricGrid: {
         flexDirection: "row",
-        alignItems: "center",
-        gap: scale(10),
+        gap: scale(12),
     },
-    emotionLabel: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: scale(8),
-        width: scale(80),
-    },
-    barEmoji: {
-        fontSize: scale(18),
-    },
-    barEmotionName: {
-        fontSize: scale(12),
-        fontWeight: "600",
-        color: colors.textDark,
-        textTransform: "capitalize",
-    },
-    barWrapper: {
+    metricCardWrap: {
         flex: 1,
-        height: verticalScale(28),
-        backgroundColor: "#F0F0F0",
-        borderRadius: scale(6),
-        overflow: "hidden",
     },
-    emotionBar: {
-        height: "100%",
-        borderRadius: scale(6),
-    },
-    barStats: {
-        width: scale(50),
-        alignItems: "flex-end",
-    },
-    barPercentage: {
-        fontSize: scale(13),
-        fontWeight: "700",
-        color: colors.textDark,
-    },
-    barConfidence: {
-        fontSize: scale(11),
-        color: colors.textLight,
-        marginTop: verticalScale(2),
-    },
-
-    // ===== DONUT CHART =====
-    donutContainer: {
-        alignItems: "center",
-        paddingVertical: verticalScale(8),
-    },
-    donutChart: {
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: verticalScale(20),
-    },
-    donutCircle: {
-        justifyContent: "center",
-        alignItems: "center",
-        position: "relative",
-    },
-    donutSegmentCircle: {
-        position: "absolute",
-    },
-    donutCenter: {
-        justifyContent: "center",
-        alignItems: "center",
+    loadingCard: {
+        borderRadius: moderateScale(12),
+        borderWidth: 1,
+        borderColor: colors.borderLight,
         backgroundColor: colors.white,
-        borderRadius: scale(80),
-    },
-    donutCenterValue: {
-        fontSize: scale(24),
-        fontWeight: "700",
-        color: colors.textDark,
-    },
-    donutCenterLabel: {
-        fontSize: scale(11),
-        color: colors.textLight,
-        marginTop: verticalScale(2),
-    },
-    donutLegend: {
-        width: "100%",
-        gap: verticalScale(12),
-    },
-    legendItem: {
-        flexDirection: "row",
         alignItems: "center",
-        gap: scale(12),
-    },
-    legendDot: {
-        width: scale(14),
-        height: scale(14),
-        borderRadius: scale(7),
-    },
-    legendLabel: {
-        fontSize: scale(12),
-        fontWeight: "600",
-        color: colors.textDark,
-    },
-    legendValue: {
-        fontSize: scale(11),
-        color: colors.textLight,
-        marginTop: verticalScale(1),
-    },
-
-    // ===== GAUGE CHART =====
-    gaugeContainer: {
-        alignItems: "center",
-        paddingVertical: verticalScale(16),
-    },
-    gaugeBar: {
-        height: scale(12),
-        width: "100%",
-        borderRadius: scale(6),
-        marginBottom: verticalScale(8),
-    },
-    gaugeLabels: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        width: "100%",
-        marginBottom: verticalScale(16),
-    },
-    gaugeLabel: {
-        fontSize: scale(11),
-        fontWeight: "600",
-        color: colors.textLight,
-    },
-    gaugePointer: {
-        position: "absolute",
-        top: scale(25),
-        marginLeft: scale(-10),
-    },
-    gaugeValue: {
-        alignItems: "center",
-        marginTop: verticalScale(12),
-    },
-    gaugeValueText: {
-        fontSize: scale(24),
-        fontWeight: "700",
-    },
-    gaugeLabelText: {
-        fontSize: scale(12),
-        color: colors.textLight,
-        marginTop: verticalScale(2),
-        textTransform: "capitalize",
-    },
-
-    // ===== HEATMAP =====
-    heatmapContainer: {
-        gap: verticalScale(8),
-    },
-    heatmapWeek: {
-        flexDirection: "row",
-        gap: scale(6),
-    },
-    heatmapDay: {
-        flex: 1,
-        aspectRatio: 1,
-        borderRadius: scale(6),
         justifyContent: "center",
-        alignItems: "center",
     },
-    heatmapDayText: {
-        fontSize: scale(10),
-        fontWeight: "600",
-        color: colors.white,
-    },
-    heatmapLegend: {
-        flexDirection: "row",
-        gap: scale(16),
-        justifyContent: "center",
-        marginTop: verticalScale(12),
-        paddingTop: verticalScale(12),
-        borderTopWidth: 1,
-        borderTopColor: colors.borderLight,
-    },
-    heatmapLegendItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: scale(6),
-    },
-    heatmapLegendDot: {
-        width: scale(10),
-        height: scale(10),
-        borderRadius: scale(5),
-    },
-    heatmapLegendText: {
-        fontSize: scale(11),
-        fontWeight: "600",
-        color: colors.textLight,
-    },
-
-    // ===== HIGHLIGHTED METRIC CARD =====
-    highlightedCard: {
+    errorContainer: {
         borderRadius: moderateScale(12),
         paddingHorizontal: scale(16),
-        paddingVertical: verticalScale(16),
-        borderWidth: 1,
-        borderColor: colors.borderLight,
-        marginBottom: verticalScale(24),
-    },
-    highlightedHeader: {
-        flexDirection: "row",
+        paddingVertical: verticalScale(40),
         alignItems: "center",
-        gap: scale(12),
-        marginBottom: verticalScale(8),
-    },
-    highlightedIconBg: {
-        width: scale(44),
-        height: scale(44),
-        borderRadius: scale(10),
         justifyContent: "center",
-        alignItems: "center",
-    },
-    highlightedLabel: {
-        fontSize: scale(13),
-        fontWeight: "600",
-        color: colors.textLight,
-    },
-    highlightedValue: {
-        fontSize: scale(32),
-        fontWeight: "700",
-        marginBottom: verticalScale(4),
-    },
-    highlightedSubtitle: {
-        fontSize: scale(12),
-        color: colors.textLight,
-        fontWeight: "500",
-    },
-
-    // ===== SNAPSHOT CARD =====
-    snapshotCardStyle: {
-        borderRadius: moderateScale(12),
-        paddingHorizontal: scale(16),
-        paddingVertical: verticalScale(16),
+        backgroundColor: colors.white,
         borderWidth: 1,
         borderColor: colors.borderLight,
+        marginVertical: verticalScale(16),
     },
-    snapshotHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: verticalScale(16),
-    },
-    snapshotTitle: {
+    errorTitle: {
         fontSize: scale(16),
         fontWeight: "700",
         color: colors.textDark,
+        marginTop: verticalScale(12),
     },
-    snapshotContent: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        gap: scale(12),
-    },
-    snapshotMini: {
-        flex: 1,
-        alignItems: "center",
-    },
-    snapshotMiniValue: {
-        fontSize: scale(20),
-        fontWeight: "700",
-        color: colors.textDark,
-    },
-    snapshotMiniLabel: {
-        fontSize: scale(11),
+    errorMessage: {
+        fontSize: scale(13),
         color: colors.textLight,
-        marginTop: verticalScale(4),
+        marginTop: verticalScale(6),
+        textAlign: "center",
+    },
+    loadingPlaceholder: {
+        height: verticalScale(24),
+        backgroundColor: colors.borderLight,
+        borderRadius: scale(6),
+        width: "80%",
     },
 
     // ===== AGGREGATION CARD =====

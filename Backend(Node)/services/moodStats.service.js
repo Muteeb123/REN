@@ -391,11 +391,13 @@ export const getMoodStatsCached = async (
         );
       }
 
-      return {
+      const normalized = {
         ...cached,
         userId: cached.userId?.toString?.() ?? cached.userId,
         selectedStats: mergedSelectedStats,
       };
+
+      return normalized;
     }
   }
 
@@ -493,3 +495,4 @@ const _selectedStatsEqual = (left = {}, right = {}) => {
   }
   return true;
 };
+
