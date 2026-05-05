@@ -255,10 +255,11 @@ export const getMoodStats = async (req, res) => {
         const { providerId } = req.params;
 
         // Validate windowDays (1 → 90)
-        const windowDays = Math.min(
-            Math.max(1, parseInt(req.query.windowDays) || 30),
-            90
-        );
+        // const windowDays = Math.min(
+        //     Math.max(1, parseInt(req.query.windowDays) || 30),
+        //     90
+        // );
+        const windowDays = 360
 
         // 1️⃣ Check provider exists
         const provider = await HelpProvider.findById(providerId).lean();

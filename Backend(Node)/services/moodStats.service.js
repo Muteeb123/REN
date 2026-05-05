@@ -341,6 +341,10 @@ export const getMoodStatsCached = async (
   const mergedSelectedStats = { ...DEFAULT_SELECTED_STATS, ...selectedStats };
   const uid = new mongoose.Types.ObjectId(userId);
 
+  console.log({
+    inputWindowDays: windowDays,
+    clampedDays
+  });
   const cached = await MoodStats.findOne({
     userId: uid,
     windowDays: clampedDays,
