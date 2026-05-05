@@ -2,8 +2,18 @@ import User from "../Models/User.model.js";
 import HelpProvider from "../Models/HelpProvider.model.js";
 import { generateRandomPassword } from "../utils/Passwordhelper.js";
 import { sendHelpProviderCredentials } from "../utils/Emailservice.js";
-import { computeMoodStats } from "../services/moodStats.service.js";
+import { getMoodStatsCached } from "../services/moodStats.service.js";
 import { createChat } from "./Chat.controller.js";
+
+const HELP_PROVIDER_STATS_DEFAULTS = {
+    emotionBreakdown:    true,
+    polaritySplit:       true,
+    dailyTrend:          true,
+    volatility:          true,
+    distressDays:        true,
+    consecutiveDistress: true,
+    weekSnapshot:        true,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INVITE HELP PROVIDER
@@ -275,7 +285,7 @@ export const getMoodStats = async (req, res) => {
         const stats = await Promise.all(
             seekers.map(async (seeker) => {
                 try {
-                    const stat = await computeMoodStats(
+                    const stat = await getMoodStatsCached(
                         seeker._id.toString(),
                         windowDays
                     );
@@ -285,6 +295,7 @@ export const getMoodStats = async (req, res) => {
                         name: seeker.name,
                         preferredName: seeker.preferredName,
                         ...stat,
+                        selectedStats: { ...HELP_PROVIDER_STATS_DEFAULTS },
                     };
                 } catch (err) {
                     // Fail-safe: don't break whole response if one fails
