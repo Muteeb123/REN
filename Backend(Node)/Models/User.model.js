@@ -69,6 +69,15 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: false,
             trim: true,
+        },
+        fcmToken: {
+            type: String,
+            required: false,
+            trim: true,
+        },
+        notificationsEnabled: {
+            type: Boolean,
+            default: true,
         }
 
     },

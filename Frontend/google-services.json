@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "166221121636",
+    "project_id": "reddit-emotion-navigator-3565e",
+    "storage_bucket": "reddit-emotion-navigator-3565e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:166221121636:android:65db66c5b0dfcc536c7771",
+        "android_client_info": {
+          "package_name": "com.muteeb1098.redditemotionnavigator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaycPfoDJivqp2T4nF_j5DAB8SHSDBBIs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

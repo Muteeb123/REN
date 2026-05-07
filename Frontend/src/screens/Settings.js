@@ -357,6 +357,7 @@ export default function Settings() {
                             await AsyncStorage.removeItem("cachedUser");
                             await AsyncStorage.removeItem("userId");
                             await AsyncStorage.removeItem("helpContactEmail");
+                            await AsyncStorage.removeItem("fcmToken");
                         } catch (error) {
 
                             Alert.alert("Error", "Failed to logout. Please try again.");
@@ -369,6 +370,8 @@ export default function Settings() {
             ]
         );
     };
+
+
 
     return (
         <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
@@ -489,6 +492,8 @@ export default function Settings() {
                             </TouchableOpacity>
                         </View >
                     </View >
+
+
                 </View >
             </KeyboardAvoidingView >
 

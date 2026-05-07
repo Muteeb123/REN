@@ -10,9 +10,22 @@ import userRoutes from "./routes/user.routes.js";
 import sentimentRoutes from "./routes/sentiment.routes.js";
 import helpProviderRoutes from "./routes/Helpprovider.routes.js";
 import chatRoutes from "./routes/Chat.routes.js";
-import pipelineRoutes from "./routes/pipeline.routes.js";   // ← NEW
+import pipelineRoutes from "./routes/pipeline.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
+import { initializeFirebase } from "./services/pushNotification.service.js";
 import { initCronJobs } from "./cron.js";
 
+
+// Initialize Firebase Admin SDK
+const firebaseServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
+  ? JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString())
+  : null;
+
+if (firebaseServiceAccount) {
+  initializeFirebase(firebaseServiceAccount);
+} else {
+  console.warn('Warning: Firebase service account not configured. Push notifications will not work.');
+}
 
 // Connect DB, then start cron jobs
 connectDB().then(() => {
@@ -32,5 +45,6 @@ app.use("/api/sentiment", sentimentRoutes);
 app.use("/api/helpprovider", helpProviderRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/pipeline", pipelineRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 export default app;
