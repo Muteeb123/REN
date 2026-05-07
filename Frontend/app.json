@@ -5,11 +5,11 @@
     "scheme": "renapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/ren.png",
+    "icon": "./assets/adaptive-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/ren.png",
+      "image": "./assets/adaptive-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,17 +18,19 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/ren.png",
-        "backgroundColor": "transparent"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.muteeb1098.redditemotionnavigator"
     },
     "web": {
-      "favicon": "./assets/ren.png"
+      "favicon": "./assets/adaptive-icon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font",
+      "@react-native-firebase/app"
     ]
   }
 }

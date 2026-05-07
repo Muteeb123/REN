@@ -25,7 +25,7 @@ import {
     NunitoSans_700Bold,
     NunitoSans_800ExtraBold,
 } from "@expo-google-fonts/nunito-sans";
-import AppLoading from "expo-app-loading";
+import * as SplashScreen from 'expo-splash-screen';
 
 const FONT = {
     regular: "NunitoSans_400Regular",
@@ -414,10 +414,7 @@ const Questionnaire = () => {
             default:
                 return null;
         }
-    };
-
-    if (!fontsLoaded) return <AppLoading />;
-
+    }; if (!fontsLoaded) return null;
     return (
         <>
             <KeyboardAvoidingView
