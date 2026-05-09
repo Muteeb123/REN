@@ -3,6 +3,7 @@ import {
     View,
     Text,
     StyleSheet,
+    Modal,
     TextInput,
     TouchableOpacity,
     SafeAreaView,
@@ -17,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../components/Header";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pencil, Trash2 } from "lucide-react-native";
+import { Pencil, Trash2, SquarePen } from "lucide-react-native";
 import { NODE_BACKEND_URL } from "../config/urls";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -53,6 +54,17 @@ export default function Settings() {
     const [prevName, setPrevName] = useState("");
     const [prevEmail, setPrevEmail] = useState("");
     const [prevRedditUsername, setPrevRedditUsername] = useState("");
+    const [showGoalsModal, setShowGoalsModal] = useState(false);
+    const GOAL_OPTIONS = [
+        "Manage Anxiety",
+        "Reduce Stress",
+        "Improve Mood",
+        "Improve Sleep",
+        "Enhance Relationships",
+        "Boost Confidence",
+    ];
+    const [selectedGoals, setSelectedGoals] = useState([]);
+    const [modalGoals, setModalGoals] = useState([]);
 
     useEffect(() => {
         const loadProfile = async () => {
@@ -68,6 +80,9 @@ export default function Settings() {
                     }
                     if (parsed?.user?.helpContactEmail) {
                         setHelpEmail(parsed.user.helpContactEmail);
+                    }
+                    if (parsed?.user?.goals && Array.isArray(parsed.user.goals)) {
+                        setSelectedGoals(parsed.user.goals);
                     }
                 }
                 // Fallback to AsyncStorage for backward compatibility
@@ -99,6 +114,32 @@ export default function Settings() {
         } catch (error) {
             console.error("Settings save name error:", error);
         }
+    };
+
+    const toggleModalGoal = (goal) => {
+        setModalGoals((prev) => {
+            if (prev.includes(goal)) return prev.filter((g) => g !== goal);
+            return [...prev, goal];
+        });
+    };
+
+    const saveGoals = async () => {
+        try {
+            // Commit modalGoals to selectedGoals and sync
+            setSelectedGoals(modalGoals);
+            const res = await updateUserProfile({ goals: modalGoals });
+            ToastAndroid.show("Goals updated", ToastAndroid.SHORT);
+            setShowGoalsModal(false);
+            return res;
+        } catch (err) {
+            ToastAndroid.show("Failed to update goals", ToastAndroid.SHORT);
+            throw err;
+        }
+    };
+
+    const openGoalsModal = () => {
+        setModalGoals(selectedGoals || []);
+        setShowGoalsModal(true);
     };
 
     const inviteHelpProvider = async (email) => {
@@ -493,6 +534,23 @@ export default function Settings() {
                         </View >
                     </View >
 
+                    <View style={styles.section}>
+                        <Text style={styles.label}>Goals</Text>
+                        <View style={styles.inputRow}>
+                            <TextInput
+                                value={selectedGoals.length ? selectedGoals.join(", ") : ""}
+                                editable={false}
+                                placeholder="No goals set"
+                                placeholderTextColor={colors.textLight}
+                                style={[styles.input, styles.inputDisabled]}
+                                multiline
+                            />
+                            <TouchableOpacity onPress={openGoalsModal} style={styles.iconButton} accessibilityLabel="Edit goals">
+                                <SquarePen size={scale(20)} color={colors.primary} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
 
                 </View >
             </KeyboardAvoidingView >
@@ -500,6 +558,36 @@ export default function Settings() {
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutButtonText}>Log Out</Text>
             </TouchableOpacity>
+            <Modal visible={showGoalsModal} transparent animationType="fade" onRequestClose={() => setShowGoalsModal(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowGoalsModal(false)}>
+                    <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>Update Goals</Text>
+                        <Text style={styles.modalSubtitle}>Select the goals that apply to you</Text>
+                        <View style={styles.optionsContainer}>
+                            {GOAL_OPTIONS.map((g) => (
+                                <TouchableOpacity
+                                    key={g}
+                                    style={[styles.option, modalGoals.includes(g) && styles.selectedOption]}
+                                    onPress={() => toggleModalGoal(g)}
+                                >
+                                    <Text style={[styles.optionText, modalGoals.includes(g) && styles.selectedText]}>{g}</Text>
+                                    {modalGoals.includes(g) && (
+                                        <Ionicons name="checkmark" size={18} color="#FFFFFF" style={styles.optionCheck} />
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowGoalsModal(false)}>
+                                <Text style={styles.modalCancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.modalSave} onPress={saveGoals}>
+                                <Text style={styles.modalSaveText}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView >
     );
 }
@@ -571,4 +659,83 @@ const styles = StyleSheet.create({
         fontSize: scale(14),
         fontWeight: "600",
     },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.32)",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: moderateScale(20),
+    },
+    modalCard: {
+        width: "100%",
+        maxWidth: moderateScale(360),
+        backgroundColor: "#FFFFFF",
+        borderRadius: moderateScale(16),
+        padding: moderateScale(18),
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        elevation: 6,
+    },
+    modalTitle: {
+        fontSize: scale(18),
+        fontWeight: "700",
+        color: colors.textDark,
+        marginBottom: verticalScale(6),
+    },
+    modalSubtitle: {
+        fontSize: scale(13),
+        color: colors.textLight,
+        marginBottom: verticalScale(12),
+    },
+    optionsContainer: {
+        flexDirection: "column",
+        marginBottom: verticalScale(14),
+    },
+    option: {
+        width: "100%",
+        paddingVertical: verticalScale(12),
+        paddingHorizontal: moderateScale(12),
+        borderRadius: moderateScale(10),
+        backgroundColor: colors.inputBackground,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        marginBottom: moderateScale(10),
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+
+    },
+    selectedOption: {
+        backgroundColor: colors.primary,
+        borderColor: "transparent",
+    },
+    optionText: {
+        color: colors.primary,
+        fontSize: scale(13),
+    },
+    selectedText: {
+        color: "#FFFFFF",
+        fontWeight: "600",
+    },
+    optionCheck: {
+        marginLeft: moderateScale(8),
+    },
+    modalActions: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        gap: moderateScale(10),
+    },
+    modalCancel: {
+        paddingVertical: verticalScale(10),
+        paddingHorizontal: moderateScale(14),
+        borderRadius: moderateScale(12),
+    },
+    modalCancelText: { color: colors.textLight },
+    modalSave: {
+        paddingVertical: verticalScale(10),
+        paddingHorizontal: moderateScale(14),
+        borderRadius: moderateScale(12),
+        backgroundColor: colors.primary,
+    },
+    modalSaveText: { color: "#FFFFFF", fontWeight: "700" },
 });

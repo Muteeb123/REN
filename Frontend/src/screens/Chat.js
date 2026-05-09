@@ -5,6 +5,7 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
+    Modal,
     FlatList,
     SafeAreaView,
     KeyboardAvoidingView,
@@ -20,7 +21,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-native-uuid";
-import { useNavigation } from "@react-navigation/native";
 import Markdown from 'react-native-markdown-display';
 
 // local asset
@@ -189,7 +189,6 @@ const MessageBubble = React.memo(({ text, isUser, animatedValue, timestamp }) =>
 
 // ======== Main ChatPage ========
 export default function ChatPage({ currentScreen, onNavigate }) {
-    const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const base_url = PYTHON_BACKEND_URL;
     const INPUT_CONTAINER_HEIGHT = verticalScale(70);
@@ -199,12 +198,21 @@ export default function ChatPage({ currentScreen, onNavigate }) {
     const [hasMore, setHasMore] = useState(true);
     const [loading, setLoading] = useState(false);
     const [botTyping, setBotTyping] = useState(false);
+    const [showGoalsReminder, setShowGoalsReminder] = useState(false);
+
+    const shouldShowGoalsReminder = true;
 
     const flatListRef = useRef(null);
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         fetchMessages(1);
+    }, []);
+
+    useEffect(() => {
+        if (shouldShowGoalsReminder) {
+            setShowGoalsReminder(true);
+        }
     }, []);
 
     const fetchMessages = useCallback(async (pageNumber = 1) => {
@@ -282,6 +290,15 @@ export default function ChatPage({ currentScreen, onNavigate }) {
         return <MessageBubble text={item.text} isUser={isUser} animatedValue={fadeAnim} timestamp={item.timestamp} />;
     };
 
+    const handleUpdateGoals = () => {
+        setShowGoalsReminder(false);
+        onNavigate?.("Settings");
+    };
+
+    const handleKeepSameGoals = () => {
+        setShowGoalsReminder(false);
+    };
+
     const baseList = botTyping ? [{ id: "typing-indicator", typing: true }, ...messages] : messages;
     const dataForList = addDateSeparators(baseList);
 
@@ -348,6 +365,56 @@ export default function ChatPage({ currentScreen, onNavigate }) {
                     </View>
                 </LinearGradient>
             </KeyboardAvoidingView>
+
+            <Modal
+                visible={showGoalsReminder}
+                transparent
+                animationType="fade"
+                onRequestClose={handleKeepSameGoals}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={handleKeepSameGoals}
+                >
+                    <View style={styles.goalsReminderCardWrap}>
+                        <View style={styles.goalsReminderBadge}>
+                            <Ionicons name="notifications-outline" size={scale(35)} color={colors.secondary} />
+                            <View style={styles.goalsReminderBadgeDot} />
+                        </View>
+
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            onPress={() => { }}
+                            style={styles.goalsReminderCard}
+                        >
+                            <Text style={styles.goalsReminderTitle}>Goals Reminder!</Text>
+                            <Text style={styles.goalsReminderText}>
+                                It&apos;s been more than 24 hours since you updated your goals. Are your goals still the same or do you want to update the goals?
+                            </Text>
+
+                            <View style={styles.goalsReminderActions}>
+
+
+                                <TouchableOpacity
+                                    style={styles.updateGoalsButton}
+                                    onPress={handleUpdateGoals}
+                                    activeOpacity={0.85}
+                                >
+                                    <Text style={styles.updateGoalsButtonText}>Update Goals</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.keepSameButton}
+                                    onPress={handleKeepSameGoals}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.keepSameButtonText}>Keep Same Goals</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -382,4 +449,112 @@ const styles = StyleSheet.create({
     sendButton: { backgroundColor: colors.secondary, width: moderateScale(44), height: moderateScale(44), borderRadius: moderateScale(12), justifyContent: "center", alignItems: "center", marginLeft: moderateScale(4) },
     sendButtonDisabled: { backgroundColor: colors.bubbleLight },
     dot: { width: moderateScale(6), height: moderateScale(6), backgroundColor: "#B3B3B3", borderRadius: 50, marginHorizontal: 2 },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(15, 23, 42, 0.34)",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: moderateScale(24),
+    },
+    goalsReminderCardWrap: {
+        width: "100%",
+        maxWidth: moderateScale(340),
+        alignItems: "center",
+    },
+    goalsReminderBadge: {
+        width: moderateScale(80),
+        height: moderateScale(80),
+        borderRadius: moderateScale(45),
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: "rgba(82, 172, 215, 0.14)",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "absolute",
+        top: -moderateScale(50),
+        zIndex: 2,
+        shadowColor: "#1A1B1E",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    goalsReminderBadgeDot: {
+        position: "absolute",
+        top: moderateScale(15),
+        right: moderateScale(25),
+        width: moderateScale(10),
+        height: moderateScale(10),
+        borderRadius: moderateScale(5),
+        backgroundColor: "#F24E4E",
+        borderWidth: 2,
+        borderColor: "#FFFFFF",
+    },
+    goalsReminderCard: {
+        width: "100%",
+        backgroundColor: "#FCFDFF",
+        borderRadius: moderateScale(20),
+        borderWidth: 1,
+        borderColor: "rgba(82, 172, 215, 0.14)",
+        paddingHorizontal: moderateScale(20),
+        paddingTop: moderateScale(30),
+        paddingBottom: moderateScale(20),
+        shadowColor: "#1A1B1E",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+    },
+    goalsReminderTitle: {
+        fontSize: moderateScale(18),
+        fontWeight: "700",
+        color: colors.textDark,
+        textAlign: "center",
+        marginBottom: moderateScale(8),
+    },
+    goalsReminderText: {
+        fontSize: moderateScale(14),
+        lineHeight: moderateScale(20),
+        color: colors.textLight,
+        textAlign: "center",
+    },
+    goalsReminderActions: {
+        marginTop: moderateScale(18),
+        gap: moderateScale(10),
+    },
+    keepSameButton: {
+        alignSelf: "center",
+        width: "62%",
+        minHeight: moderateScale(44),
+        borderRadius: moderateScale(12),
+        borderWidth: 0,
+        color: colors.primary,
+        backgroundColor: "transparent",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: moderateScale(12),
+    },
+    keepSameButtonText: {
+        fontSize: moderateScale(13),
+        fontWeight: "700",
+        color: colors.secondary,
+        textAlign: "center",
+        textDecorationLine: "underline",
+        textDecorationColor: colors.secondary,
+    },
+    updateGoalsButton: {
+        width: "100%",
+        minHeight: moderateScale(44),
+        borderRadius: moderateScale(12),
+        backgroundColor: colors.secondary,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: moderateScale(12),
+    },
+    updateGoalsButtonText: {
+        fontSize: moderateScale(12),
+        fontWeight: "700",
+        color: "#FFFFFF",
+        textAlign: "center",
+    },
 });
