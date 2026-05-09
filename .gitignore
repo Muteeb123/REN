@@ -1,3 +1,4 @@
+**/.env
 venv/
 __pycache__/
 *.pyc
@@ -10,3 +11,4 @@ Frontend/config/urls.js
 
 Backend(Node)/.env
 Backend(Node)/node_modules/
+Backend(Node)/.env
