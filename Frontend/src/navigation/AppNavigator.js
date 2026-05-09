@@ -11,6 +11,7 @@ import {
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { BackHandler, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Login from "../screens/Login";
@@ -79,6 +80,31 @@ function MainTabsLayout({ route, navigation }) {
     const handleNavigateToScreen = (screenName) => {
         setCurrentScreen(screenName);
     };
+
+    // Handle Android hardware back button: if not on Chat, go to Chat; if on Chat, confirm exit
+    useEffect(() => {
+        const onBackPress = () => {
+            if (currentScreen && currentScreen !== "Chat") {
+                setCurrentScreen("Chat");
+                return true; // handled
+            }
+
+            // On Chat (main) prompt for exit
+            Alert.alert(
+                "Exit REN",
+                "Are you sure you want to exit the app?",
+                [
+                    { text: "Cancel", style: "cancel", onPress: () => { } },
+                    { text: "Exit", style: "destructive", onPress: () => BackHandler.exitApp() },
+                ],
+                { cancelable: true }
+            );
+            return true; // handled
+        };
+
+        const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+        return () => subscription.remove();
+    }, [currentScreen]);
 
     return (
         <View style={styles.mainTabsContainer}>
