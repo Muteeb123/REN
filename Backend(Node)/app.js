@@ -13,7 +13,7 @@ import chatRoutes from "./routes/Chat.routes.js";
 import pipelineRoutes from "./routes/pipeline.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import { initializeFirebase } from "./services/pushNotification.service.js";
-import { initCronJobs } from "./cron.js";
+import { initCronJobs, initReminderJob } from "./cron.js";
 
 
 // Initialize Firebase Admin SDK
@@ -30,6 +30,7 @@ if (firebaseServiceAccount) {
 // Connect DB, then start cron jobs
 connectDB().then(() => {
   initCronJobs();  // safe to start after DB is ready
+  initReminderJob(); // start reminder cron (env-driven schedule)
 });
 
 const app = express();

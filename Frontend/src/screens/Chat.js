@@ -25,7 +25,7 @@ import Markdown from 'react-native-markdown-display';
 
 // local asset
 import BotIcon from "../../assets/ren.png";
-import { PYTHON_BACKEND_URL } from "../config/urls";
+import { PYTHON_BACKEND_URL, NODE_BACKEND_URL } from "../config/urls";
 import Header from "../components/Header";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -199,8 +199,7 @@ export default function ChatPage({ currentScreen, onNavigate }) {
     const [loading, setLoading] = useState(false);
     const [botTyping, setBotTyping] = useState(false);
     const [showGoalsReminder, setShowGoalsReminder] = useState(false);
-
-    const shouldShowGoalsReminder = true;
+    const [goalsChecked, setGoalsChecked] = useState(false);
 
     const flatListRef = useRef(null);
     const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -210,9 +209,43 @@ export default function ChatPage({ currentScreen, onNavigate }) {
     }, []);
 
     useEffect(() => {
-        if (shouldShowGoalsReminder) {
-            setShowGoalsReminder(true);
-        }
+        // Check whether to show goals reminder (based on backend `goals_updated_at`)
+        const checkGoalsReminder = async () => {
+            try {
+                const userId = await AsyncStorage.getItem("userId");
+                if (!userId) return setGoalsChecked(true);
+
+                // try cached user first
+                const cached = await AsyncStorage.getItem("cachedUser");
+                let user = cached ? JSON.parse(cached).user : null;
+
+                if (!user) {
+                    const resp = await fetch(`${NODE_BACKEND_URL}/api/user/${userId}`);
+                    if (resp.ok) {
+                        const json = await resp.json();
+                        user = json.user;
+                    }
+                }
+
+                if (!user) return setGoalsChecked(true);
+
+                const goals = Array.isArray(user.goals) ? user.goals : [];
+                if (!goals || goals.length === 0) return setGoalsChecked(true);
+
+                const goalsUpdatedAt = user.goals_updated_at ? new Date(user.goals_updated_at) : null;
+                const now = new Date();
+                const thresholdMinutes = 24 * 60; // 24 hours
+
+                const needsReminder = !goalsUpdatedAt || ((now - goalsUpdatedAt) / 60000) > thresholdMinutes;
+                if (needsReminder) setShowGoalsReminder(true);
+            } catch (err) {
+                console.error("checkGoalsReminder error", err);
+            } finally {
+                setGoalsChecked(true);
+            }
+        };
+
+        checkGoalsReminder();
     }, []);
 
     const fetchMessages = useCallback(async (pageNumber = 1) => {
@@ -291,12 +324,52 @@ export default function ChatPage({ currentScreen, onNavigate }) {
     };
 
     const handleUpdateGoals = () => {
-        setShowGoalsReminder(false);
-        onNavigate?.("Settings");
+        // Acknowledge reminder then navigate to Settings
+        (async () => {
+            try {
+                const userId = await AsyncStorage.getItem("userId");
+                if (userId) {
+                    await fetch(`${NODE_BACKEND_URL}/api/user/ack-goals`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId }),
+                    });
+                }
+            } catch (e) {
+                console.warn("ack goals failed", e);
+            } finally {
+                setShowGoalsReminder(false);
+                onNavigate?.("Settings");
+            }
+        })();
     };
 
     const handleKeepSameGoals = () => {
-        setShowGoalsReminder(false);
+        // Mark as acknowledged so we don't show again
+        (async () => {
+            try {
+                const userId = await AsyncStorage.getItem("userId");
+                if (userId) {
+                    await fetch(`${NODE_BACKEND_URL}/api/user/ack-goals`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId }),
+                    });
+
+                    // update cached user if present
+                    const cached = await AsyncStorage.getItem("cachedUser");
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        parsed.user = { ...parsed.user, goals_updated_at: new Date().toISOString() };
+                        await AsyncStorage.setItem("cachedUser", JSON.stringify(parsed));
+                    }
+                }
+            } catch (e) {
+                console.warn("ack goals failed", e);
+            } finally {
+                setShowGoalsReminder(false);
+            }
+        })();
     };
 
     const baseList = botTyping ? [{ id: "typing-indicator", typing: true }, ...messages] : messages;

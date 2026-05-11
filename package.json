@@ -2,7 +2,7 @@
     "name": "ren-dev-runner",
     "private": true,
     "scripts": {
-        "dev": "concurrently -n PYTHON_API,NGROK,CLOUDFLARE,NODE_API,FRONTEND \"cd \\\"Backend(Python)\\\" && python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload\" \"ngrok http --url=https://namely-finer-seasnail.ngrok-free.app 8000\" \"cloudflared tunnel --url http://localhost:5000\" \"cd \\\"Backend(Node)\\\" && npm run dev\" \"cd Frontend && npm run android\""
+        "dev": "concurrently -n PYTHON_API,NGROK,NODE_API,FRONTEND \"cd \\\"Backend(Python)\\\" && python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload\" \"ngrok http --url=https://namely-finer-seasnail.ngrok-free.app 8000\"  \"cd \\\"Backend(Node)\\\" && npm run dev\" \"cd Frontend && npm run android\""
     },
     "devDependencies": {
         "concurrently": "^9.0.1"

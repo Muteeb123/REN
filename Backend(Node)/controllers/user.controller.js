@@ -45,6 +45,8 @@ export const personalize = async (req, res) => {
 
         if (Object.prototype.hasOwnProperty.call(req.body, "goals")) {
             updatePayload.goals = goals || undefined;
+            // record the time goals were updated (or acknowledged)
+            updatePayload.goals_updated_at = new Date();
         }
 
         if (Object.prototype.hasOwnProperty.call(req.body, "causes")) {
@@ -76,5 +78,26 @@ export const personalize = async (req, res) => {
     } catch (error) {
         console.error("Personalization Error:", error);
         res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// Acknowledge goals reminder without changing goals (sets `goals_updated_at` to now)
+export const ackGoalsReminder = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ message: 'User ID required' });
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { goals_updated_at: new Date() },
+            { new: true }
+        );
+
+        if (!updatedUser) return res.status(404).json({ message: 'User not found' });
+
+        return res.status(200).json({ message: 'Acknowledged', user: updatedUser });
+    } catch (error) {
+        console.error('Ack goals reminder error:', error);
+        return res.status(500).json({ message: 'Server error', error: error.message });
     }
 };

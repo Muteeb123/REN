@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        goals_updated_at: {
+            type: Date,
+            required: false,
+        },
 
         causes: {
             type: [String],
@@ -48,6 +52,11 @@ const userSchema = new mongoose.Schema(
 
         refreshToken: {
             type: String,
+            required: false,
+        },
+
+        lastLoginAt: {
+            type: Date,
             required: false,
         },
 

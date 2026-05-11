@@ -17,7 +17,7 @@ export const redditAuth = (req, res) => {
     };
     const encodedState = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
-    
+
     console.log("Initiating Reddit Auth...");
     console.log("Reddirect URI:", process.env.REDDIT_REDIRECT_URI);
     const url =
@@ -92,8 +92,9 @@ export const redditCallback = async (req, res) => {
 
         const email = `${profile.name}@gmail.com`;
 
-        // 🔹 Find or create user
+        // 🔹 Find or create user. Update lastLoginAt when they authenticate.
         let user = await User.findOne({ name: profile.name });
+        const now = new Date();
 
         if (!user) {
             user = await User.create({
@@ -103,7 +104,18 @@ export const redditCallback = async (req, res) => {
                 avatar,
                 refreshToken: tokenData.refresh_token,
                 age: null,
+                lastLoginAt: now,
             });
+        } else {
+            // Update token/refresh token and lastLoginAt for existing users
+            user.token = tokenData.access_token;
+            if (tokenData.refresh_token) user.refreshToken = tokenData.refresh_token;
+            user.lastLoginAt = now;
+            try {
+                await user.save();
+            } catch (e) {
+                console.warn('Failed to update existing user login fields', e);
+            }
         }
 
         let appRedirect = process.env.FRONTEND_SUCCESS_REDIRECT || "renapp://auth-success";

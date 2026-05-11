@@ -405,8 +405,13 @@ export default function MeditationSession() {
                     );
                     return true; // Prevent default back behavior
                 } else {
-                    // Allow default back behavior when session is not active
-                    return false;
+                    // Consume the event so the app-level exit prompt does not fire underneath this screen.
+                    if (navigation.canGoBack()) {
+                        navigation.goBack();
+                    } else {
+                        navigation.navigate("Meditation");
+                    }
+                    return true;
                 }
             }
         );
