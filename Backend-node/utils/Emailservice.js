@@ -35,6 +35,7 @@ export const sendHelpProviderCredentials = async (toEmail, password) => {
       `,
     });
 
+    console.log("[EmailService] Email send initiated:", result);
     console.log("[EmailService] Email sent successfully:", result?.data?.id);
     return result;
   } catch (error) {
