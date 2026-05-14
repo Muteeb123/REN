@@ -40,6 +40,11 @@
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "@react-native-firebase/messaging"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4bbc8688-14e3-48f8-9975-13e1f6681005"
+      }
+    }
   }
 }

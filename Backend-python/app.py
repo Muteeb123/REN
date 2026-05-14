@@ -9,6 +9,9 @@ from routes.sentimentRoutes import router as sentimentRouter
 load_dotenv()  # Load GEMINI_API_KEY from .env
 
 app = FastAPI()
+@app.get("/")
+def root():
+    return {"status": "running", "message": "API is working 🚀"}
 
 origins = [
     "*",  # Allow all origins (can be restricted to your frontend URLs)
