@@ -5,7 +5,7 @@
 ### Backend Setup (5 minutes)
 - [ ] Install firebase-admin: `npm install firebase-admin`
 - [ ] Get Firebase Service Account key from Firebase Console
-- [ ] Create `.env` file in `Backend(Node)` with:
+- [ ] Create `.env` file in `Backend-node` with:
   ```
   FIREBASE_SERVICE_ACCOUNT=<base64_encoded_key>
   ```
@@ -35,7 +35,7 @@
 
 ```bash
 # Backend
-cd "Backend(Node)"
+cd "Backend-node"
 npm install firebase-admin
 npm run dev
 
@@ -67,11 +67,11 @@ curl -X POST http://localhost:5000/api/notifications/test \
 
 | File | Purpose |
 |------|---------|
-| `Backend(Node)/services/pushNotification.service.js` | Firebase logic |
-| `Backend(Node)/routes/notification.routes.js` | API endpoints |
+| `Backend-node/services/pushNotification.service.js` | Firebase logic |
+| `Backend-node/routes/notification.routes.js` | API endpoints |
 | `Frontend/App.js` | Permission & token setup |
 | `Frontend/src/screens/Settings.js` | UI controls |
-| `Backend(Node)/Models/User.model.js` | Database fields |
+| `Backend-node/Models/User.model.js` | Database fields |
 
 ## Environment Variables Needed
 

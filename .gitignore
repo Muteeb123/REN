@@ -9,6 +9,6 @@ Frontend/node_modules/
 Frontend/build/
 Frontend/config/urls.js
 
-Backend(Node)/.env
-Backend(Node)/node_modules/
-Backend(Node)/.env
+Backend-node/.env
+Backend-node/node_modules/
+Backend-node/.env

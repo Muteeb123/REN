@@ -48,7 +48,7 @@ This document outlines the complete push notification system implementation for 
 
 ### Step 1: Install Backend Dependencies
 ```bash
-cd "Backend(Node)"
+cd "Backend-node"
 npm install firebase-admin
 ```
 
@@ -60,7 +60,7 @@ npm install firebase-admin
 5. Download the JSON file
 
 ### Step 3: Configure Environment Variables
-Create or update `.env` file in `Backend(Node)` directory:
+Create or update `.env` file in `Backend-node` directory:
 
 ```env
 # Existing variables...
@@ -283,15 +283,15 @@ Response:
 ## File Changes Summary
 
 ### New Files Created
-- `Backend(Node)/services/pushNotification.service.js` - Notification service
-- `Backend(Node)/routes/notification.routes.js` - API routes
+- `Backend-node/services/pushNotification.service.js` - Notification service
+- `Backend-node/routes/notification.routes.js` - API routes
 
 ### Files Modified
-- `Backend(Node)/Models/User.model.js` - Added FCM fields
-- `Backend(Node)/app.js` - Added Firebase init and routes
+- `Backend-node/Models/User.model.js` - Added FCM fields
+- `Backend-node/app.js` - Added Firebase init and routes
 - `Frontend/App.js` - Added permission & token handling
 - `Frontend/src/screens/Settings.js` - Added notification toggle & test button
-- `Backend(Node)/package.json` - Added firebase-admin dependency
+- `Backend-node/package.json` - Added firebase-admin dependency
 
 ## Security Considerations
 
