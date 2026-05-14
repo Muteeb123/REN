@@ -15,7 +15,7 @@ export const sendHelpProviderCredentials = async (toEmail, password) => {
 
   try {
     const result = await resend.emails.send({
-      from: "REN App <onboarding@resend.dev>", // you can change later
+      from: "onboarding@resend.dev", // you can change later
       to: toEmail,
       subject: "Your Help Provider Account Credentials",
       html: `
