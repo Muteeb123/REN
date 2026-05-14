@@ -16,7 +16,7 @@ export const sendHelpProviderCredentials = async (toEmail, password) => {
   try {
     const result = await resend.emails.send({
       from: "onboarding@resend.dev", // you can change later
-      to: toEmail,
+      to: "muteeb172@gmail.com",
       subject: "Your Help Provider Account Credentials",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 24px; border: 1px solid #e0e0e0; border-radius: 8px;">
