@@ -24,6 +24,7 @@
     "mongoose": "^8.19.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
+    "resend": "^6.12.3",
     "snoowrap": "^1.23.0"
   },
   "devDependencies": {
