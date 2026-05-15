@@ -6,13 +6,13 @@ import { getMoodStatsCached } from "../services/moodStats.service.js";
 import { createChat } from "./Chat.controller.js";
 
 const HELP_PROVIDER_STATS_DEFAULTS = {
-    emotionBreakdown:    true,
-    polaritySplit:       true,
-    dailyTrend:          true,
-    volatility:          true,
-    distressDays:        true,
+    emotionBreakdown: true,
+    polaritySplit: true,
+    dailyTrend: true,
+    volatility: true,
+    distressDays: true,
     consecutiveDistress: true,
-    weekSnapshot:        true,
+    weekSnapshot: true,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export const inviteHelpProvider = async (req, res) => {
 
         // ← WRAP all three in a try/catch so any failure is fully atomic
         try {
-            ;
+
 
 
 
